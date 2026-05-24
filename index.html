@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#00ff9d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LIFE OS">
+  <meta name="description" content="LIFE OS — Real-time activity tracker by Anshul Sati">
+  <title>LIFE OS // Mission Control</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="grid-bg" aria-hidden="true"></div>
+
+  <div class="creator-banner">
+    Created with <span class="heart">&#10084;</span> by <strong>Anshul Sati</strong>
+  </div>
+
+  <!-- PWA install prompt (shown when browser allows install) -->
+  <div class="install-banner hidden" id="installBanner">
+    <div class="install-banner-text">
+      <strong>Install LIFE OS</strong> — use like a native app (works offline)
+    </div>
+    <div class="install-banner-actions">
+      <button type="button" class="btn btn-primary" id="btnInstallBanner">Install</button>
+      <button type="button" class="btn btn-ghost" id="btnDismissInstall">Later</button>
+    </div>
+  </div>
+
+  <div class="offline-badge hidden" id="offlineBadge">OFFLINE — data saved on device</div>
+
+  <header class="header">
+    <div class="header-left">
+      <span class="logo-icon">&#9672;</span>
+      <h1 class="logo">LIFE<span class="accent">OS</span></h1>
+      <span class="version">PWA</span>
+    </div>
+    <div class="header-center header-center-wrap">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="systemStatus">STANDBY</span>
+      <span class="divider">|</span>
+      <select id="userSelect" class="user-select" title="Switch user"></select>
+      <span class="divider">|</span>
+      <span id="todaySummary" class="today-summary">0 ops</span>
+      <span class="divider hide-mobile">|</span>
+      <span id="currentDate" class="hide-mobile">--</span>
+      <span class="divider">|</span>
+      <span id="currentClock">00:00:00</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-ghost" id="btnCharts" type="button">CHARTS</button>
+      <button class="btn btn-ghost" id="btnSound" type="button">SND</button>
+      <button class="btn btn-ghost hide-mobile" id="btnFullscreen" type="button">FULL</button>
+      <button class="btn btn-ghost" id="btnHelp" type="button">?</button>
+      <button class="btn btn-primary" id="btnSettings" type="button">SET</button>
+    </div>
+  </header>
+
+  <!-- Mobile: hidden input captures phone keyboard -->
+  <div class="mobile-key-bar" id="mobileKeyBar">
+    <button type="button" class="btn btn-primary" id="btnFocusKeys">Tap here — use phone keyboard to log tasks</button>
+    <input type="text" id="mobileKeyInput" class="mobile-key-input" maxlength="8" autocomplete="off" autocorrect="off" autocapitalize="characters" enterkeyhint="done" aria-label="Task key input">
+  </div>
+
+  <div class="subtask-banner hidden" id="subtaskBanner">
+    <span class="pulse-ring"></span>
+    <span class="banner-text">AWAITING SUBTASK — <strong id="pendingMainName">--</strong></span>
+    <span class="countdown" id="subtaskCountdown">2.0s</span>
+    <div class="subtask-hints" id="subtaskHints"></div>
+  </div>
+
+  <div class="idle-alert hidden" id="idleAlert">
+    LOW FOCUS — Idle for <span id="idleDuration">0</span> min
+  </div>
+
+  <main class="dashboard">
+    <section class="panel panel-live" id="livePanel">
+      <div class="panel-header"><span class="panel-tag">LIVE</span><h2>Active Operation</h2></div>
+      <div class="live-content">
+        <div class="task-display">
+          <div class="task-label">CURRENT OPERATION</div>
+          <div class="task-breadcrumb" id="taskBreadcrumb">— STANDBY —</div>
+          <div class="task-main hidden-legacy" id="currentMain" aria-hidden="true"></div>
+          <div class="task-sub hidden-legacy" id="currentSub" aria-hidden="true"></div>
+          <span class="task-category-badge hidden" id="taskCategoryBadge"></span>
+        </div>
+        <div class="timer-block">
+          <div class="timer-label">ELAPSED TIME</div>
+          <div class="timer-display" id="liveTimer">00:00:00</div>
+          <div class="timer-meta">
+            <span>STARTED <strong id="taskStartTime">--:--</strong></span>
+            <span>DURATION <strong id="taskDuration">0m</strong></span>
+          </div>
+        </div>
+        <div class="quick-keys" id="quickKeys"></div>
+        <div class="mobile-tap-keys" id="mobileTapKeys"></div>
+      </div>
+    </section>
+
+    <section class="panel panel-timeline">
+      <div class="panel-header">
+        <span class="panel-tag">LOG</span><h2>Daily Timeline</h2>
+        <div class="panel-actions">
+          <button class="btn btn-sm" id="btnExportJson" type="button">JSON</button>
+          <button class="btn btn-sm" id="btnExportCsv" type="button">CSV</button>
+        </div>
+      </div>
+      <div class="timeline-list" id="timelineList">
+        <div class="timeline-empty">No activity logged yet. Press a key to begin.</div>
+      </div>
+    </section>
+
+    <div class="right-column">
+      <section class="panel panel-analytics">
+        <div class="panel-header"><span class="panel-tag">INTEL</span><h2>Daily Analytics</h2></div>
+        <div class="analytics-grid">
+          <div class="stat-card stat-card-wide">
+            <span class="stat-label">Productivity Score</span>
+            <span class="stat-value accent" id="statScore">—</span>
+            <p class="stat-hint">% of logged time in productive work</p>
+            <div class="score-bar"><div class="score-fill" id="scoreFill" style="width:0%"></div></div>
+          </div>
+          <div class="stat-card"><span class="stat-label">Productive Time</span><span class="stat-value" id="statProductive">0h 0m</span></div>
+          <div class="stat-card"><span class="stat-label">Study Time</span><span class="stat-value" id="statStudy">0h 0m</span></div>
+          <div class="stat-card"><span class="stat-label">Phone / Distraction</span><span class="stat-value warn" id="statPhone">0h 0m</span></div>
+          <div class="stat-card"><span class="stat-label">Longest Focus</span><span class="stat-value" id="statLongest">0m</span></div>
+          <div class="stat-card"><span class="stat-label">Task Switches</span><span class="stat-value" id="statSwitches">0</span></div>
+          <div class="stat-card"><span class="stat-label">Focus Streak</span><span class="stat-value" id="statStreak">0m</span></div>
+          <div class="stat-card"><span class="stat-label">Total Tracked</span><span class="stat-value" id="statTotal">0h 0m</span></div>
+        </div>
+        <div class="breakdown-section">
+          <h3>Subject Breakdown</h3>
+          <div class="breakdown-bars" id="breakdownBars"><div class="breakdown-empty">No data yet</div></div>
+        </div>
+      </section>
+      <section class="panel panel-recent">
+        <div class="panel-header"><span class="panel-tag">RECENT</span><h2>Last 5 Operations</h2></div>
+        <div class="recent-list" id="recentList"><div class="recent-empty">No completed tasks yet.</div></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal-overlay hidden" id="chartsModal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>Analytics Dashboard</h2>
+        <button class="btn-close" id="btnCloseCharts" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="chart-controls">
+          <button class="chart-range-btn active" data-range="day" type="button">Today</button>
+          <button class="chart-range-btn" data-range="week" type="button">This Week</button>
+        </div>
+        <div id="chartsContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="btn-close" id="btnCloseSettings" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="tab active" data-tab="users" type="button">Users</button>
+          <button class="tab" data-tab="main" type="button">Main Tasks</button>
+          <button class="tab" data-tab="sub" type="button">Subtasks</button>
+          <button class="tab" data-tab="categories" type="button">Categories</button>
+          <button class="tab" data-tab="prefs" type="button">Preferences</button>
+          <button class="tab" data-tab="data" type="button">Data</button>
+        </div>
+
+        <div class="tab-content active" data-tab="users" id="tabUsers">
+          <p class="tab-desc">Each user has separate logs and key mappings on this device. Rename or switch users below.</p>
+          <div id="usersList" class="users-list"></div>
+          <button class="btn btn-primary" id="btnAddUser" type="button">+ Add User</button>
+        </div>
+
+        <div class="tab-content" data-tab="main" id="tabMain">
+          <p class="tab-desc">Keys are saved per user on this device only.</p>
+          <div class="mapping-form">
+            <input type="text" id="mainKeyInput" placeholder="Key" maxlength="1" class="input-key">
+            <input type="text" id="mainNameInput" placeholder="Task name" class="input-name">
+            <select id="mainCategoryInput" class="input-select">
+              <option value="productive">Productive</option>
+              <option value="study">Study</option>
+              <option value="distraction">Distraction</option>
+              <option value="neutral">Neutral</option>
+              <option value="rest">Rest</option>
+            </select>
+            <button class="btn btn-primary" id="btnAddMain" type="button">Add</button>
+          </div>
+          <div class="mapping-list" id="mainMappingList"></div>
+          <div class="bulk-actions"><button class="btn btn-sm btn-danger" id="btnDeleteSelectedMain" type="button">Delete Selected</button></div>
+        </div>
+
+        <div class="tab-content" data-tab="sub" id="tabSub">
+          <p class="tab-desc">Assign subtask keys under a parent main task.</p>
+          <div class="mapping-form">
+            <select id="subParentInput" class="input-select"></select>
+            <input type="text" id="subKeyInput" placeholder="Key" maxlength="1" class="input-key">
+            <input type="text" id="subNameInput" placeholder="Subtask name" class="input-name">
+            <button class="btn btn-primary" id="btnAddSub" type="button">Add</button>
+          </div>
+          <div class="mapping-list" id="subMappingList"></div>
+          <div class="bulk-actions"><button class="btn btn-sm btn-danger" id="btnDeleteSelectedSub" type="button">Delete Selected</button></div>
+        </div>
+
+        <div class="tab-content" data-tab="categories" id="tabCategories">
+          <p class="tab-desc">Productivity score = % of time in <strong>Productive</strong> + <strong>Study</strong> categories.</p>
+          <div class="category-info">
+            <p><strong>Productive</strong> — counts toward productivity %</p>
+            <p><strong>Study</strong> — counts toward productivity %</p>
+            <p><strong>Distraction</strong> — does not count as productive</p>
+            <p><strong>Neutral / Rest</strong> — tracked, not productive</p>
+          </div>
+          <div class="mapping-list" id="categoryList"></div>
+        </div>
+
+        <div class="tab-content" data-tab="prefs" id="tabPrefs">
+          <div class="prefs-form">
+            <label class="pref-row">
+              <span>Clock format</span>
+              <select id="prefClockFormat" class="input-select">
+                <option value="24">24-hour</option>
+                <option value="12">12-hour (AM/PM)</option>
+              </select>
+            </label>
+            <label class="pref-row">
+              <span>Subtask wait</span>
+              <select id="prefSubtaskWait" class="input-select">
+                <option value="1500">1.5 sec</option>
+                <option value="2000" selected>2 sec</option>
+                <option value="3000">3 sec</option>
+                <option value="5000">5 sec</option>
+              </select>
+            </label>
+            <label class="pref-row">
+              <span>Idle alert</span>
+              <select id="prefIdleMinutes" class="input-select">
+                <option value="3">3 min</option>
+                <option value="5" selected>5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+              </select>
+            </label>
+            <label class="pref-row pref-check"><input type="checkbox" id="prefSound" checked><span>Sound</span></label>
+            <label class="pref-row pref-check"><input type="checkbox" id="prefTimelineNewest" checked><span>Newest first</span></label>
+            <button class="btn btn-primary" id="btnSavePrefs" type="button">Save Preferences</button>
+          </div>
+          <div class="install-pwa" id="installPwaBox">
+            <p>Install on Android: tap browser menu → <strong>Add to Home screen</strong> or use the button below.</p>
+            <button class="btn btn-primary" id="btnInstallPwa" type="button">Install App</button>
+          </div>
+        </div>
+
+        <div class="tab-content" data-tab="data" id="tabData">
+          <div class="danger-zone">
+            <h3>Delete Logged Data</h3>
+            <p>Remove timeline history. Key mappings stay unless you clear everything.</p>
+            <button class="btn btn-danger btn-lg" id="btnDeleteLogs" type="button">DELETE ALL LOGGED DATA (THIS USER)</button>
+          </div>
+          <div class="danger-zone">
+            <h3>Delete Everything</h3>
+            <p>Removes all logs and mappings for the <strong>current user</strong>.</p>
+            <button class="btn btn-danger btn-lg" id="btnClearUserData" type="button">CLEAR CURRENT USER COMPLETELY</button>
+          </div>
+          <hr>
+          <div class="import-export-actions">
+            <button class="btn btn-primary" id="btnExportMappings" type="button">Export Mappings</button>
+            <button class="btn btn-primary" id="btnImportMappings" type="button">Import Mappings</button>
+            <input type="file" id="importMappingsFile" accept=".json" hidden>
+            <button class="btn btn-sm" id="btnExportAllData" type="button">Export User Backup</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="helpModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Command Reference</h2>
+        <button class="btn-close" id="btnCloseHelp" type="button">&times;</button>
+      </div>
+      <div class="modal-body help-body">
+        <div class="help-section">
+          <h3>Task Switching</h3>
+          <p>Press a mapped key — previous task auto-saves.</p>
+          <p>Main key, then subtask key within the wait window.</p>
+          <p><strong>Phone:</strong> tap the green bar or on-screen keys; soft keyboard works.</p>
+        </div>
+        <div class="help-section">
+          <h3>Shortcuts</h3>
+          <ul class="help-keys">
+            <li>Ctrl+K — settings</li>
+            <li>? — help</li>
+            <li>` — key overlay</li>
+          </ul>
+        </div>
+        <div id="helpKeyList" class="help-key-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="command-bar">
+    <span class="footer-credit">Made with <span class="heart">&#10084;</span> by <strong>Anshul Sati</strong></span>
+    <span class="divider">|</span>
+    <span>Keys switch tasks instantly</span>
+  </footer>
+
+  <div class="key-overlay hidden" id="keyOverlay">
+    <div class="key-overlay-title">ACTIVE COMMANDS</div>
+    <div class="key-overlay-grid" id="keyOverlayGrid"></div>
+  </div>
+
+  <div class="task-flash hidden" id="taskFlash"></div>
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="charts.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
