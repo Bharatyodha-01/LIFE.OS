@@ -96,6 +96,26 @@
     return userPrefix() + 'active';
   }
 
+  function saveCurrentActiveTask() {
+    if (state.currentTask) {
+      localStorage.setItem(sessionActiveKey(), JSON.stringify(state.currentTask));
+    } else {
+      localStorage.removeItem(sessionActiveKey());
+    }
+  }
+
+  function loadCurrentActiveTask() {
+    const raw = localStorage.getItem(sessionActiveKey());
+    if (!raw) return null;
+    try {
+      const restored = JSON.parse(raw);
+      if (restored && restored.main && restored.startTime) {
+        return restored;
+      }
+    } catch (e) { /* ignore invalid saved task */ }
+    return null;
+  }
+
   function isProductiveCategory(cat) {
     return cat === 'productive' || cat === 'study';
   }
@@ -242,7 +262,7 @@
     });
     if (state.currentTask) {
       state.currentTask = null;
-      sessionStorage.removeItem(sessionActiveKey());
+      saveCurrentActiveTask();
     }
     refreshAllUI();
     showToast('All logged data deleted');
@@ -255,7 +275,7 @@
     saveMappings();
     state.currentTask = null;
     cancelSubtaskWait();
-    sessionStorage.removeItem(sessionActiveKey());
+    saveCurrentActiveTask();
     refreshAllUI();
     showToast('User data cleared');
   }
@@ -716,7 +736,7 @@
     saveTodayData(dayData);
 
     state.currentTask = null;
-    sessionStorage.removeItem(sessionActiveKey());
+    saveCurrentActiveTask();
     renderTimeline();
     renderRecent();
     renderAnalytics();
@@ -736,13 +756,13 @@
       mainKey: mainKey
     };
 
+    saveCurrentActiveTask();
     flashTaskSwitch();
     playSwitchSound();
     updateLivePanel();
     renderTimeline();
     updateTodaySummary();
     updateSystemStatus();
-    sessionStorage.setItem(sessionActiveKey(), JSON.stringify(state.currentTask));
     markActivity();
   }
 
@@ -1702,26 +1722,20 @@
     setupPWA();
     refreshAllUI();
 
-    // Resume active task from today if page refreshed mid-task
-    const activeRaw = sessionStorage.getItem(sessionActiveKey());
-    if (activeRaw) {
-      try {
-        const restored = JSON.parse(activeRaw);
-        if (restored && restored.main && restored.startTime) {
-          state.currentTask = restored;
-          updateLivePanel();
-          showToast(`Resumed: ${formatTaskLabel(restored.main, restored.sub)}`);
-        }
-      } catch (e) { /* ignore */ }
+    // Restore active task from localStorage so tasks continue after browser/app closes
+    const restoredTask = loadCurrentActiveTask();
+    if (restoredTask) {
+      state.currentTask = restoredTask;
+      updateLivePanel();
+      renderTimeline();
+      renderAnalytics();
+      updateTodaySummary();
+      showToast(`Resumed: ${formatTaskLabel(restoredTask.main, restoredTask.sub)}`);
     }
 
-    // Persist active task on page unload
+    // Ensure active task is persisted whenever it changes, not just on unload
     window.addEventListener('beforeunload', () => {
-      if (state.currentTask) {
-        sessionStorage.setItem(sessionActiveKey(), JSON.stringify(state.currentTask));
-      } else {
-        sessionStorage.removeItem(sessionActiveKey());
-      }
+      saveCurrentActiveTask();
     });
 
     // Live clock + timer tick every second
