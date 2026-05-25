@@ -739,7 +739,7 @@
     saveTodayData(dayData);
 
     state.currentTask = null;
-    saveCurrentActiveTask();
+    localStorage.removeItem(sessionActiveKey());
     renderTimeline();
     renderRecent();
     renderAnalytics();
@@ -750,8 +750,8 @@
   /** Start a new task (auto-ends previous) */
   function startTask(mainName, subName, mainKey) {
     cancelSubtaskWait();
-    endCurrentTask();
 
+    const previousTask = state.currentTask;
     state.currentTask = {
       main: mainName,
       sub: subName || null,
@@ -760,6 +760,26 @@
     };
 
     saveCurrentActiveTask();
+
+    if (previousTask) {
+      const entry = {
+        main: previousTask.main,
+        sub: previousTask.sub || null,
+        category: getCategory(previousTask.main),
+        start: previousTask.startTime,
+        end: state.currentTask.startTime,
+        startFormatted: formatTime(new Date(previousTask.startTime)),
+        endFormatted: formatTime(new Date(state.currentTask.startTime)),
+        durationMs: state.currentTask.startTime - previousTask.startTime
+      };
+      const dayData = getTodayData();
+      dayData.timeline.push(entry);
+      dayData.taskSwitches = (dayData.taskSwitches || 0) + 1;
+      saveTodayData(dayData);
+      renderRecent();
+      renderAnalytics();
+    }
+
     flashTaskSwitch();
     playSwitchSound();
     updateLivePanel();
