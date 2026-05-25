@@ -109,8 +109,11 @@
     if (!raw) return null;
     try {
       const restored = JSON.parse(raw);
-      if (restored && restored.main && restored.startTime) {
-        return restored;
+      if (restored && restored.main && restored.startTime != null) {
+        restored.startTime = Number(restored.startTime);
+        if (!Number.isNaN(restored.startTime)) {
+          return restored;
+        }
       }
     } catch (e) { /* ignore invalid saved task */ }
     return null;
@@ -1717,19 +1720,19 @@
     migrateLegacyData();
     loadPreferences();
     loadMappings();
+
+    // Restore active task before the first UI render so the live entry is included immediately.
+    const restoredTask = loadCurrentActiveTask();
+    if (restoredTask) {
+      state.currentTask = restoredTask;
+    }
+
     bindEvents();
     setupMobileKeyboard();
     setupPWA();
     refreshAllUI();
 
-    // Restore active task from localStorage so tasks continue after browser/app closes
-    const restoredTask = loadCurrentActiveTask();
     if (restoredTask) {
-      state.currentTask = restoredTask;
-      updateLivePanel();
-      renderTimeline();
-      renderAnalytics();
-      updateTodaySummary();
       showToast(`Resumed: ${formatTaskLabel(restoredTask.main, restoredTask.sub)}`);
     }
 
