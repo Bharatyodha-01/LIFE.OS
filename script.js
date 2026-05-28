@@ -73,6 +73,7 @@
     mappings: { mainTasks: {}, subTasks: {}, categories: {} },
     currentTask: null, // { main, sub, startTime, startedAt, mainKey }
     pendingMain: null, // { key, name } while waiting for subtask
+    awaitingSubtaskFor: null, // { key, name } while subtask context owns key routing
     inputContext: { mode: 'normal', parentKey: null },
     subtaskTimer: null,
     subtaskCountdownInterval: null,
@@ -529,7 +530,7 @@
 
   function updateSystemStatus() {
     const el = document.getElementById('systemStatus');
-    if (state.pendingMain) {
+    if (getAwaitingSubtaskContext()) {
       el.textContent = 'AWAITING SUBTASK';
       el.style.color = 'var(--amber)';
     } else if (state.currentTask) {
@@ -552,6 +553,10 @@
 
   function formatTaskLabel(main, sub) {
     return sub ? `${main} > ${sub}` : main;
+  }
+
+  function getAwaitingSubtaskContext() {
+    return state.inputContext.mode === 'subtask' ? state.awaitingSubtaskFor : null;
   }
 
   // ─── Utility Functions ───────────────────────────────────────
@@ -841,6 +846,7 @@
 
     const waitMs = getSubtaskWaitMs();
     state.pendingMain = { key: mainKey, name: mainName };
+    state.awaitingSubtaskFor = state.pendingMain;
     state.inputContext = { mode: 'subtask', parentKey: mainKey };
     const banner = document.getElementById('subtaskBanner');
     banner.classList.remove('hidden');
@@ -887,6 +893,7 @@
       state.subtaskCountdownInterval = null;
     }
     state.pendingMain = null;
+    state.awaitingSubtaskFor = null;
     state.inputContext = { mode: 'normal', parentKey: null };
     document.getElementById('subtaskBanner').classList.add('hidden');
     document.getElementById('subtaskHints').innerHTML = '';
@@ -909,10 +916,12 @@
     markActivity();
     const k = key.toUpperCase();
 
+    const awaitingSubtaskFor = getAwaitingSubtaskContext();
+
     // In subtask context, only the selected parent's subtasks are valid.
-    if (state.inputContext.mode === 'subtask' && state.pendingMain) {
-      const parentKey = state.pendingMain.key;
-      const mainName = state.pendingMain.name;
+    if (awaitingSubtaskFor) {
+      const parentKey = awaitingSubtaskFor.key;
+      const mainName = awaitingSubtaskFor.name;
       const subs = state.mappings.subTasks[parentKey] || {};
       const subName = subs && subs[k];
 
@@ -962,7 +971,7 @@
       state.idleAlertShown = false;
       document.getElementById('idleAlert').classList.add('hidden');
     }
-    if (state.currentTask && !state.pendingMain) {
+    if (state.currentTask && !getAwaitingSubtaskContext()) {
       document.getElementById('statusDot').className = 'status-dot';
     }
   }
