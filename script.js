@@ -73,6 +73,7 @@
     mappings: { mainTasks: {}, subTasks: {}, categories: {} },
     currentTask: null, // { main, sub, startTime, startedAt, mainKey }
     pendingMain: null, // { key, name } while waiting for subtask
+    inputContext: { mode: 'normal', parentKey: null },
     subtaskTimer: null,
     subtaskCountdownInterval: null,
     soundEnabled: true,
@@ -678,28 +679,21 @@
   }
 
   /**
-   * Check if a key is already mapped.
-   * When adding a subtask (parentKeyForSubAdd set), main-task keys may be reused
-   * under a parent (e.g. W = Workout main AND WhatsApp under Phone).
+   * Check if a key is already mapped in the same input context.
+   * Main-task keys live in the normal context. Subtask keys live only under
+   * their parent main task, so the same key can be reused elsewhere.
    */
   function getKeyConflict(key, parentKeyForSubAdd) {
     const k = key.toUpperCase();
 
     if (!parentKeyForSubAdd) {
       if (state.mappings.mainTasks[k]) return state.mappings.mainTasks[k];
-      for (const [pk, subs] of Object.entries(state.mappings.subTasks)) {
-        if (subs[k]) return `${state.mappings.mainTasks[pk] || pk} > ${subs[k]}`;
-      }
       return null;
     }
 
     const ownSubs = state.mappings.subTasks[parentKeyForSubAdd];
     if (ownSubs && ownSubs[k]) {
       return `${state.mappings.mainTasks[parentKeyForSubAdd] || parentKeyForSubAdd} > ${ownSubs[k]}`;
-    }
-    for (const [pk, subs] of Object.entries(state.mappings.subTasks)) {
-      if (pk === parentKeyForSubAdd) continue;
-      if (subs[k]) return `${state.mappings.mainTasks[pk] || pk} > ${subs[k]}`;
     }
     return null;
   }
@@ -847,6 +841,7 @@
 
     const waitMs = getSubtaskWaitMs();
     state.pendingMain = { key: mainKey, name: mainName };
+    state.inputContext = { mode: 'subtask', parentKey: mainKey };
     const banner = document.getElementById('subtaskBanner');
     banner.classList.remove('hidden');
     document.getElementById('pendingMainName').textContent = mainName;
@@ -892,6 +887,7 @@
       state.subtaskCountdownInterval = null;
     }
     state.pendingMain = null;
+    state.inputContext = { mode: 'normal', parentKey: null };
     document.getElementById('subtaskBanner').classList.add('hidden');
     document.getElementById('subtaskHints').innerHTML = '';
     document.getElementById('statusDot').className = 'status-dot';
@@ -913,15 +909,14 @@
     markActivity();
     const k = key.toUpperCase();
 
-    // If waiting for subtask, check subtask keys for pending main FIRST
-    if (state.pendingMain) {
+    // In subtask context, only the selected parent's subtasks are valid.
+    if (state.inputContext.mode === 'subtask' && state.pendingMain) {
       const parentKey = state.pendingMain.key;
       const mainName = state.pendingMain.name;
-      const subs = state.mappings.subTasks[parentKey];
+      const subs = state.mappings.subTasks[parentKey] || {};
       const subName = subs && subs[k];
 
       if (subName) {
-        // Save pending info BEFORE cancelSubtaskWait clears it
         cancelSubtaskWait();
         startTask(mainName, subName, parentKey);
         playSubtaskSound();
@@ -929,8 +924,8 @@
         return;
       }
 
-      // Not a subtask for this parent — cancel wait, then try as new main key below
-      cancelSubtaskWait();
+      showToast(`Press a ${mainName} subtask key`, 'error');
+      return;
     }
 
     // Check if it's a main task key
