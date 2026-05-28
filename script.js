@@ -71,7 +71,7 @@
   // ─── Application State ───────────────────────────────────────
   const state = {
     mappings: { mainTasks: {}, subTasks: {}, categories: {} },
-    currentTask: null, // { main, sub, startTime, mainKey }
+    currentTask: null, // { main, sub, startTime, startedAt, mainKey }
     pendingMain: null, // { key, name } while waiting for subtask
     subtaskTimer: null,
     subtaskCountdownInterval: null,
@@ -85,7 +85,8 @@
     activeUserId: 'user1',
     users: [],
     chartRange: 'day',
-    deferredInstallPrompt: null
+    deferredInstallPrompt: null,
+    isRestoringTask: false
   };
 
   function userPrefix() {
@@ -96,27 +97,52 @@
     return userPrefix() + 'active';
   }
 
+  function normalizeActiveTask(task) {
+    if (!task || !task.main) return null;
+
+    const startedAt = Number(task.startedAt ?? task.startTime);
+    if (!Number.isFinite(startedAt) || startedAt <= 0) return null;
+
+    return {
+      main: task.main,
+      sub: task.sub || null,
+      startTime: startedAt,
+      startedAt,
+      mainKey: task.mainKey || null
+    };
+  }
+
   function saveCurrentActiveTask() {
-    if (state.currentTask) {
-      localStorage.setItem(sessionActiveKey(), JSON.stringify(state.currentTask));
-    } else {
-      localStorage.removeItem(sessionActiveKey());
-    }
+    const activeTask = normalizeActiveTask(state.currentTask);
+    if (!activeTask) return;
+
+    console.log('[LIFE OS] SAVING ACTIVE TASK:', activeTask.main, activeTask.sub || '', 'startedAt:', activeTask.startedAt);
+    localStorage.setItem(sessionActiveKey(), JSON.stringify(activeTask));
+  }
+
+  function removeActiveTask() {
+    console.log('[LIFE OS] REMOVING ACTIVE TASK');
+    localStorage.removeItem(sessionActiveKey());
   }
 
   function loadCurrentActiveTask() {
     const raw = localStorage.getItem(sessionActiveKey());
     if (!raw) return null;
     try {
-      const restored = JSON.parse(raw);
-      if (restored && restored.main && restored.startTime != null) {
-        restored.startTime = Number(restored.startTime);
-        if (!Number.isNaN(restored.startTime)) {
-          return restored;
-        }
+      const restored = normalizeActiveTask(JSON.parse(raw));
+      if (restored) {
+        console.log('[LIFE OS] RESTORING ACTIVE TASK:', restored.main, restored.sub || '', 'startedAt:', restored.startedAt, 'elapsed:', Date.now() - restored.startedAt, 'ms');
+        return restored;
       }
     } catch (e) { /* ignore invalid saved task */ }
+    removeActiveTask();
     return null;
+  }
+
+  function restoreCurrentActiveTask() {
+    state.currentTask = loadCurrentActiveTask();
+    if (state.currentTask) saveCurrentActiveTask();
+    return state.currentTask;
   }
 
   function isProductiveCategory(cat) {
@@ -182,13 +208,14 @@
 
   function switchUser(userId) {
     if (userId === state.activeUserId) return;
-    if (state.currentTask) endCurrentTask();
+
+    saveCurrentActiveTask();
     cancelSubtaskWait();
     state.activeUserId = userId;
     saveUsers();
     loadPreferences();
     loadMappings();
-    state.currentTask = null;
+    restoreCurrentActiveTask();
     refreshAllUI();
     showToast('Switched to ' + getActiveUserName());
   }
@@ -249,13 +276,20 @@
   }
 
   function deleteUser(userId) {
+    const deletingActiveUser = state.activeUserId === userId;
     Object.keys(localStorage).filter((k) => k.startsWith(STORAGE_PREFIX + 'u_' + userId + '_'))
       .forEach((k) => localStorage.removeItem(k));
     state.users = state.users.filter((u) => u.id !== userId);
     if (state.users.length === 0) state.users = [...DEFAULT_USERS];
-    if (state.activeUserId === userId) state.activeUserId = state.users[0].id;
+    if (deletingActiveUser) {
+      state.currentTask = null;
+      state.activeUserId = state.users[0].id;
+    }
     saveUsers();
-    switchUser(state.activeUserId);
+    loadPreferences();
+    loadMappings();
+    restoreCurrentActiveTask();
+    refreshAllUI();
   }
 
   function deleteAllLoggedDataForUser() {
@@ -265,7 +299,7 @@
     });
     if (state.currentTask) {
       state.currentTask = null;
-      saveCurrentActiveTask();
+      removeActiveTask();
     }
     refreshAllUI();
     showToast('All logged data deleted');
@@ -278,7 +312,7 @@
     saveMappings();
     state.currentTask = null;
     cancelSubtaskWait();
-    saveCurrentActiveTask();
+    removeActiveTask();
     refreshAllUI();
     showToast('User data cleared');
   }
@@ -500,9 +534,11 @@
     } else if (state.currentTask) {
       el.textContent = 'TRACKING ACTIVE';
       el.style.color = 'var(--accent)';
+      console.log('[LIFE OS] System status: TRACKING ACTIVE -', state.currentTask.main, state.currentTask.sub || '');
     } else {
       el.textContent = 'STANDBY';
       el.style.color = '';
+      console.log('[LIFE OS] System status: STANDBY');
     }
   }
 
@@ -721,6 +757,9 @@
   /** End current task and save to timeline */
   function endCurrentTask(endTime = new Date()) {
     if (!state.currentTask) return;
+    
+    console.trace('[LIFE OS] endCurrentTask called');
+    console.log('[LIFE OS] endCurrentTask ending:', state.currentTask.main, state.currentTask.sub || '');
 
     const entry = {
       main: state.currentTask.main,
@@ -739,7 +778,7 @@
     saveTodayData(dayData);
 
     state.currentTask = null;
-    localStorage.removeItem(sessionActiveKey());
+    removeActiveTask();
     renderTimeline();
     renderRecent();
     renderAnalytics();
@@ -752,14 +791,25 @@
     cancelSubtaskWait();
 
     const previousTask = state.currentTask;
+    const startedAt = Date.now();
+    
+    // GUARD: Prevent duplicate task start during restoration phase
+    if (
+      state.isRestoringTask &&
+      previousTask &&
+      previousTask.main === mainName &&
+      previousTask.sub === (subName || null)
+    ) {
+      console.log('[LIFE OS] Prevented duplicate task start during restoration:', mainName, subName || '');
+      return;
+    }
     state.currentTask = {
       main: mainName,
       sub: subName || null,
-      startTime: Date.now(),
+      startTime: startedAt,
+      startedAt,
       mainKey: mainKey
     };
-
-    saveCurrentActiveTask();
 
     if (previousTask) {
       const entry = {
@@ -767,10 +817,10 @@
         sub: previousTask.sub || null,
         category: getCategory(previousTask.main),
         start: previousTask.startTime,
-        end: state.currentTask.startTime,
+        end: startedAt,
         startFormatted: formatTime(new Date(previousTask.startTime)),
-        endFormatted: formatTime(new Date(state.currentTask.startTime)),
-        durationMs: state.currentTask.startTime - previousTask.startTime
+        endFormatted: formatTime(new Date(startedAt)),
+        durationMs: startedAt - previousTask.startTime
       };
       const dayData = getTodayData();
       dayData.timeline.push(entry);
@@ -779,6 +829,8 @@
       renderRecent();
       renderAnalytics();
     }
+
+    saveCurrentActiveTask();
 
     flashTaskSwitch();
     playSwitchSound();
@@ -1372,7 +1424,7 @@
     entries.forEach(e => {
       rows.push([e.startFormatted, e.endFormatted, e.main, e.sub || '', formatDurationHuman(e.durationMs)]);
     });
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\\n');
     downloadFile(`lifeos-timeline-${dateKey()}.csv`, csv, 'text/csv');
     showToast('Timeline exported as CSV');
   }
@@ -1741,24 +1793,43 @@
     loadPreferences();
     loadMappings();
 
-    // Restore active task before the first UI render so the live entry is included immediately.
-    const restoredTask = loadCurrentActiveTask();
+    // PHASE 1: Restore active task BEFORE the first UI render
+    console.log('[LIFE OS] init() PHASE 1: Starting task restoration');
+    state.isRestoringTask = true;
+    const restoredTask = restoreCurrentActiveTask();
     if (restoredTask) {
-      state.currentTask = restoredTask;
+      console.log('[LIFE OS] Active task restored in init():', restoredTask.main, restoredTask.sub || '');
     }
 
+    // PHASE 2: Setup events and UI (with restoration flag still active)
+    console.log('[LIFE OS] init() PHASE 2: Binding events and rendering UI');
     bindEvents();
     setupMobileKeyboard();
     setupPWA();
     refreshAllUI();
 
+    // PHASE 3: END restoration phase - now safe to accept key input
+    console.log('[LIFE OS] init() PHASE 3: Completing restoration phase');
+    state.isRestoringTask = false;
+
+    // PHASE 4: If task was restored, ensure UI is fully synced
     if (restoredTask) {
+      console.log('[LIFE OS] init() PHASE 4: Syncing restored task UI');
+      updateLivePanel();
+      tickTimer();
+      updateSystemStatus();
       showToast(`Resumed: ${formatTaskLabel(restoredTask.main, restoredTask.sub)}`);
     }
 
     // Ensure active task is persisted whenever it changes, not just on unload
+    // NOTE: beforeunload only SAVES the active task. It NEVER removes or clears it.
     window.addEventListener('beforeunload', () => {
       saveCurrentActiveTask();
+      console.log('[LIFE OS] beforeunload: active task saved');
+    });
+    window.addEventListener('pagehide', saveCurrentActiveTask);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveCurrentActiveTask();
     });
 
     // Live clock + timer tick every second
@@ -1776,3 +1847,5 @@
     init();
   }
 })();
+
+
