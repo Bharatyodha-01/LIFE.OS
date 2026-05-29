@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v17-scrollbar-panels';
+const CACHE_NAME = 'lifeos-pwa-v18-accordion-hitarea';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -10,6 +10,7 @@ const PRECACHE = [
   './',
   './index.html',
   './style.css',
+  './style.css?v=20260529-accordion-hitarea',
   './style.css?v=20260529-scrollbar-panels',
   './style.css?v=20260529-readability-spacing',
   './style.css?v=20260529-readability-panels',

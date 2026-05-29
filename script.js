@@ -1375,23 +1375,25 @@
     const taskSummaryOpen = state.timelinePanels.taskSummary;
 
     container.innerHTML = `<div class="mission-analysis timeline-section${missionOpen ? '' : ' is-collapsed'}" data-timeline-panel="mission">
-      <div class="mission-analysis-title">
-        <button class="timeline-section-toggle" type="button" data-toggle-timeline-panel="mission" aria-expanded="${missionOpen}" aria-controls="missionAnalysisBody">
-          <span class="timeline-section-arrow" aria-hidden="true">&#9660;</span>Mission Analysis
-        </button>
+      <button class="mission-analysis-title timeline-section-toggle" type="button" data-toggle-timeline-panel="mission" aria-expanded="${missionOpen}" aria-controls="missionAnalysisBody">
+        <span class="timeline-section-label">
+          <span class="timeline-section-arrow" aria-hidden="true">${missionOpen ? '&#9660;' : '&#9654;'}</span>
+          <span>Mission Analysis</span>
+        </span>
         <strong>${title}</strong>
-      </div>
+      </button>
       <div class="timeline-section-body" id="missionAnalysisBody">
         <div class="mission-metrics">
           ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
         </div>
       </div>
       <div class="task-summary timeline-section${taskSummaryOpen ? '' : ' is-collapsed'}" data-timeline-panel="taskSummary">
-        <div class="task-summary-title">
-          <button class="timeline-section-toggle" type="button" data-toggle-timeline-panel="taskSummary" aria-expanded="${taskSummaryOpen}" aria-controls="taskSummaryBody">
-            <span class="timeline-section-arrow" aria-hidden="true">&#9660;</span>Task Summary
-          </button>
-        </div>
+        <button class="task-summary-title timeline-section-toggle" type="button" data-toggle-timeline-panel="taskSummary" aria-expanded="${taskSummaryOpen}" aria-controls="taskSummaryBody">
+          <span class="timeline-section-label">
+            <span class="timeline-section-arrow" aria-hidden="true">${taskSummaryOpen ? '&#9660;' : '&#9654;'}</span>
+            <span>Task Summary</span>
+          </span>
+        </button>
         <div class="timeline-section-body" id="taskSummaryBody">
           <div class="task-summary-grid">
             ${taskSummaryHTML(summary.taskSummary)}
@@ -1471,7 +1473,11 @@
     const section = document.querySelector(`[data-timeline-panel="${panel}"]`);
     const toggle = document.querySelector(`[data-toggle-timeline-panel="${panel}"]`);
     if (section) section.classList.toggle('is-collapsed', !state.timelinePanels[panel]);
-    if (toggle) toggle.setAttribute('aria-expanded', String(state.timelinePanels[panel]));
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(state.timelinePanels[panel]));
+      const arrow = toggle.querySelector('.timeline-section-arrow');
+      if (arrow) arrow.innerHTML = state.timelinePanels[panel] ? '&#9660;' : '&#9654;';
+    }
   }
 
   function dayTimelineHTML(day) {
