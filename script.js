@@ -79,7 +79,7 @@
     subtaskCountdownInterval: null,
     soundEnabled: true,
     prefs: { ...DEFAULT_PREFS },
-    timelinePanels: { mission: true, taskSummary: true },
+    timelinePanels: { mission: true, taskSummary: false },
     lastActivity: Date.now(),
     idleAlertShown: false,
     analyticsTick: 0,
@@ -1448,10 +1448,10 @@
       const saved = JSON.parse(sessionStorage.getItem(TIMELINE_PANEL_STATE_KEY) || '{}');
       state.timelinePanels = {
         mission: saved.mission !== false,
-        taskSummary: saved.taskSummary !== false
+        taskSummary: saved.taskSummary === true
       };
     } catch (error) {
-      state.timelinePanels = { mission: true, taskSummary: true };
+      state.timelinePanels = { mission: true, taskSummary: false };
     }
   }
 

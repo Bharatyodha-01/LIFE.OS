@@ -770,10 +770,37 @@ body.pwa-standalone {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  scrollbar-color: var(--accent) #071018;
+  scrollbar-width: auto;
+  scroll-behavior: smooth;
 }
 
-.timeline-list::-webkit-scrollbar { width: 4px; }
-.timeline-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.timeline-list::-webkit-scrollbar {
+  width: 14px;
+}
+
+.timeline-list::-webkit-scrollbar-track {
+  background: #071018;
+  border-left: 1px solid var(--border);
+}
+
+.timeline-list::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 3px solid #071018;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #00ff9dcc, #00b4ff99);
+  box-shadow: inset 0 0 0 1px #00ff9d66;
+}
+
+.timeline-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--accent), var(--blue));
+  box-shadow: 0 0 12px #00ff9d66, inset 0 0 0 1px #ffffff55;
+}
+
+.timeline-list::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+  box-shadow: 0 0 16px #00ff9d88;
+}
 
 .timeline-empty, .recent-empty, .breakdown-empty {
   padding: 30px;
