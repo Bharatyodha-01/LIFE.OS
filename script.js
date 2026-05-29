@@ -17,6 +17,8 @@
   const STORAGE_PREFIX = 'lifeos_';
   const RETENTION_DAYS = 90;
   const LAUNCH_SPLASH_KEY = 'lifeos_launch_splash_seen';
+  const LAUNCH_SPLASH_SETTLE_MS = 160;
+  const TIMELINE_PANEL_STATE_KEY = 'lifeos_timeline_panel_state';
 
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
@@ -77,6 +79,7 @@
     subtaskCountdownInterval: null,
     soundEnabled: true,
     prefs: { ...DEFAULT_PREFS },
+    timelinePanels: { mission: true, taskSummary: true },
     lastActivity: Date.now(),
     idleAlertShown: false,
     analyticsTick: 0,
@@ -98,21 +101,33 @@
     try {
       if (sessionStorage.getItem(LAUNCH_SPLASH_KEY) === '1') {
         splash.remove();
+        document.documentElement.classList.remove('splash-pending', 'splash-running');
         return;
       }
       sessionStorage.setItem(LAUNCH_SPLASH_KEY, '1');
     } catch (error) {
       splash.remove();
+      document.documentElement.classList.remove('splash-pending', 'splash-running');
       return;
     }
 
     const dismiss = () => {
       splash.classList.add('is-dismissed');
       splash.remove();
+      document.documentElement.classList.remove('splash-pending', 'splash-running');
+      document.documentElement.classList.add('splash-complete');
     };
 
     splash.addEventListener('animationend', dismiss, { once: true });
-    window.setTimeout(dismiss, 2300);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          document.documentElement.classList.remove('splash-pending');
+          document.documentElement.classList.add('splash-running');
+        }, LAUNCH_SPLASH_SETTLE_MS);
+      });
+    });
+    window.setTimeout(dismiss, LAUNCH_SPLASH_SETTLE_MS + 2700);
   }
 
   function userPrefix() {
@@ -1356,15 +1371,31 @@
       month: 'THIS MONTH'
     }[model.range] || 'TODAY';
 
-    container.innerHTML = `<div class="mission-analysis">
-      <div class="mission-analysis-title"><span>MISSION ANALYSIS</span><strong>${title}</strong></div>
-      <div class="mission-metrics">
-        ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
+    const missionOpen = state.timelinePanels.mission;
+    const taskSummaryOpen = state.timelinePanels.taskSummary;
+
+    container.innerHTML = `<div class="mission-analysis timeline-section${missionOpen ? '' : ' is-collapsed'}" data-timeline-panel="mission">
+      <div class="mission-analysis-title">
+        <button class="timeline-section-toggle" type="button" data-toggle-timeline-panel="mission" aria-expanded="${missionOpen}" aria-controls="missionAnalysisBody">
+          <span class="timeline-section-arrow" aria-hidden="true">&#9660;</span>Mission Analysis
+        </button>
+        <strong>${title}</strong>
       </div>
-      <div class="task-summary">
-        <div class="task-summary-title">TASK SUMMARY</div>
-        <div class="task-summary-grid">
-          ${taskSummaryHTML(summary.taskSummary)}
+      <div class="timeline-section-body" id="missionAnalysisBody">
+        <div class="mission-metrics">
+          ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
+        </div>
+      </div>
+      <div class="task-summary timeline-section${taskSummaryOpen ? '' : ' is-collapsed'}" data-timeline-panel="taskSummary">
+        <div class="task-summary-title">
+          <button class="timeline-section-toggle" type="button" data-toggle-timeline-panel="taskSummary" aria-expanded="${taskSummaryOpen}" aria-controls="taskSummaryBody">
+            <span class="timeline-section-arrow" aria-hidden="true">&#9660;</span>Task Summary
+          </button>
+        </div>
+        <div class="timeline-section-body" id="taskSummaryBody">
+          <div class="task-summary-grid">
+            ${taskSummaryHTML(summary.taskSummary)}
+          </div>
         </div>
       </div>
     </div>`;
@@ -1410,6 +1441,37 @@
       <strong>${escapeHtml(task.label)}</strong>
       <span>${formatDurationHuman(task.durationMs)}</span>
     </div>`).join('');
+  }
+
+  function loadTimelinePanelState() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(TIMELINE_PANEL_STATE_KEY) || '{}');
+      state.timelinePanels = {
+        mission: saved.mission !== false,
+        taskSummary: saved.taskSummary !== false
+      };
+    } catch (error) {
+      state.timelinePanels = { mission: true, taskSummary: true };
+    }
+  }
+
+  function saveTimelinePanelState() {
+    try {
+      sessionStorage.setItem(TIMELINE_PANEL_STATE_KEY, JSON.stringify(state.timelinePanels));
+    } catch (error) {
+      // Session persistence is a convenience; the UI remains usable without it.
+    }
+  }
+
+  function toggleTimelinePanel(panel) {
+    if (!Object.prototype.hasOwnProperty.call(state.timelinePanels, panel)) return;
+    state.timelinePanels[panel] = !state.timelinePanels[panel];
+    saveTimelinePanelState();
+
+    const section = document.querySelector(`[data-timeline-panel="${panel}"]`);
+    const toggle = document.querySelector(`[data-toggle-timeline-panel="${panel}"]`);
+    if (section) section.classList.toggle('is-collapsed', !state.timelinePanels[panel]);
+    if (toggle) toggle.setAttribute('aria-expanded', String(state.timelinePanels[panel]));
   }
 
   function dayTimelineHTML(day) {
@@ -1943,6 +2005,12 @@
       });
     });
 
+    document.getElementById('timelineSummary')?.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-toggle-timeline-panel]');
+      if (!toggle) return;
+      toggleTimelinePanel(toggle.dataset.toggleTimelinePanel);
+    });
+
     // Settings tabs only (not chart range buttons)
     document.querySelectorAll('.settings-tabs .tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -2174,6 +2242,7 @@
     loadUsers();
     migrateLegacyData();
     loadPreferences();
+    loadTimelinePanelState();
     loadMappings();
 
     // PHASE 1: Restore active task BEFORE the first UI render

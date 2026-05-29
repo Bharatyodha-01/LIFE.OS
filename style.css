@@ -27,6 +27,7 @@
   --font-mono: 'Share Tech Mono', monospace;
   --radius: 4px;
   --transition: 0.15s ease;
+  --readable-tracking: 0.035em;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,8 +39,9 @@ html, body {
   background: var(--bg-deep);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15.5px;
+  line-height: 1.6;
+  letter-spacing: var(--readable-tracking);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -61,7 +63,7 @@ body.pwa-standalone {
   place-items: center;
   background: #000000;
   pointer-events: none;
-  animation: launch-splash-fade 2200ms ease forwards;
+  opacity: 0;
   will-change: opacity;
 }
 
@@ -70,6 +72,8 @@ body.pwa-standalone {
   width: min(220px, 42vw, 34vh);
   height: auto;
   object-fit: contain;
+  transform: scale(0.95);
+  will-change: transform;
 }
 
 .splash-seen .launch-splash,
@@ -77,11 +81,39 @@ body.pwa-standalone {
   display: none;
 }
 
+.splash-pending body > :not(.launch-splash),
+.splash-running body > :not(.launch-splash) {
+  opacity: 0;
+}
+
+.splash-running body > :not(.launch-splash) {
+  animation: dashboard-launch-crossfade 2600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity;
+}
+
+.splash-running .launch-splash {
+  animation: launch-splash-fade 2600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.splash-running .launch-splash-logo {
+  animation: launch-logo-scale 2600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 @keyframes launch-splash-fade {
   0% { opacity: 0; }
-  27.2727% { opacity: 1; }
-  72.7273% { opacity: 1; }
+  26.9231% { opacity: 1; }
+  73.0769% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+@keyframes launch-logo-scale {
+  0% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes dashboard-launch-crossfade {
+  0%, 70% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* Background effects */
@@ -515,6 +547,54 @@ body.pwa-standalone {
   letter-spacing: 0.16em;
 }
 
+.timeline-section-toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.timeline-section-toggle:hover,
+.timeline-section-toggle:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+.timeline-section-arrow {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--accent);
+  transition: transform 0.2s ease;
+}
+
+.timeline-section.is-collapsed .timeline-section-arrow {
+  transform: rotate(-90deg);
+}
+
+.timeline-section-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease;
+}
+
+.timeline-section-body > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.timeline-section.is-collapsed .timeline-section-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
 .mission-analysis-title strong {
   color: var(--accent);
   font-family: var(--font-display);
@@ -616,22 +696,36 @@ body.pwa-standalone {
 
 .task-summary {
   border-top: 1px solid var(--border);
-  padding: 9px 10px 10px;
   background: #090e13;
 }
 
 .task-summary-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
   color: var(--blue);
   font-family: var(--font-display);
   font-size: 0.58rem;
   letter-spacing: 0.16em;
-  margin-bottom: 8px;
+}
+
+.task-summary-title .timeline-section-toggle {
+  color: var(--blue);
+  font-family: inherit;
+}
+
+.task-summary-title .timeline-section-toggle:hover,
+.task-summary-title .timeline-section-toggle:focus-visible {
+  color: var(--accent);
 }
 
 .task-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+  padding: 0 10px 10px;
 }
 
 .task-summary-row {
