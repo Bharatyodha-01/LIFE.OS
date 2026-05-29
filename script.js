@@ -601,7 +601,46 @@
 
   /** Format date key YYYY-MM-DD */
   function dateKey(date = new Date()) {
-    return date.toISOString().slice(0, 10);
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function entryIdentity(entry) {
+    return [
+      entry.start || entry.startTime || '',
+      entry.end || '',
+      entry.main || '',
+      entry.sub || '',
+      entry.durationMs || ''
+    ].join('|');
+  }
+
+  function emptyDayData() {
+    return { timeline: [], taskSwitches: 0 };
+  }
+
+  function readStoredDayData(key) {
+    const raw = localStorage.getItem(userPrefix() + 'day_' + key);
+    if (!raw) return emptyDayData();
+    try {
+      const data = JSON.parse(raw);
+      return {
+        timeline: Array.isArray(data.timeline) ? data.timeline : [],
+        taskSwitches: Number(data.taskSwitches) || 0
+      };
+    } catch (e) {
+      return emptyDayData();
+    }
+  }
+
+  function getUserDayKeys() {
+    const prefix = userPrefix() + 'day_';
+    return Object.keys(localStorage)
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => key.replace(prefix, ''));
   }
 
   /** Format milliseconds as HH:MM:SS */
@@ -625,12 +664,7 @@
 
   /** Get today's timeline from storage */
   function getTodayData() {
-    const key = userPrefix() + 'day_' + dateKey();
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try { return JSON.parse(raw); } catch (e) { /* fall through */ }
-    }
-    return { timeline: [], taskSwitches: 0 };
+    return getDayDataByKey(dateKey());
   }
 
   /** Save today's timeline */
