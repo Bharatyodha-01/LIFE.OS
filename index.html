@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260529-active-commands-left">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -102,8 +102,10 @@
             <span>DURATION <strong id="taskDuration">0m</strong></span>
           </div>
         </div>
-        <div class="quick-keys" id="quickKeys"></div>
-        <div class="mobile-tap-keys" id="mobileTapKeys"></div>
+        <div class="key-overlay" id="keyOverlay">
+          <div class="key-overlay-title">ACTIVE COMMANDS</div>
+          <div class="key-overlay-grid" id="keyOverlayGrid"></div>
+        </div>
       </div>
     </section>
 
@@ -321,15 +323,10 @@
     <span>Keys switch tasks instantly</span>
   </footer>
 
-  <div class="key-overlay hidden" id="keyOverlay">
-    <div class="key-overlay-title">ACTIVE COMMANDS</div>
-    <div class="key-overlay-grid" id="keyOverlayGrid"></div>
-  </div>
-
   <div class="task-flash hidden" id="taskFlash"></div>
   <div class="toast hidden" id="toast"></div>
 
   <script src="charts.js"></script>
-  <script src="script.js?v=20260529-key-context"></script>
+  <script src="script.js?v=20260529-active-commands-left"></script>
 </body>
 </html>

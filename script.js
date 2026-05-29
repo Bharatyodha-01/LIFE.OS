@@ -329,7 +329,6 @@
     updateSystemStatus();
     renderUserSelect();
     renderUsersList();
-    renderMobileTapKeys();
   }
 
   function getEntriesForRange(range) {
@@ -420,25 +419,6 @@
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
   }
 
-  function renderMobileTapKeys() {
-    const wrap = document.getElementById('mobileTapKeys');
-    if (!wrap) return;
-    if (!isMobileDevice()) {
-      wrap.innerHTML = '';
-      return;
-    }
-    let html = '';
-    Object.entries(state.mappings.mainTasks).forEach(([key, name]) => {
-      const subN = state.mappings.subTasks[key] ? Object.keys(state.mappings.subTasks[key]).length : 0;
-      const hint = subN ? ` (+${subN} sub)` : '';
-      html += `<button type="button" class="tap-key" data-tap-key="${key}"><kbd>${key}</kbd>${name}${hint}</button>`;
-    });
-    wrap.innerHTML = html;
-    wrap.querySelectorAll('.tap-key').forEach((btn) => {
-      btn.addEventListener('click', () => handleTaskKey(btn.dataset.tapKey));
-    });
-  }
-
   function setupMobileKeyboard() {
     const input = document.getElementById('mobileKeyInput');
     const bar = document.getElementById('mobileKeyBar');
@@ -525,7 +505,7 @@
     const btnSound = document.getElementById('btnSound');
     if (btnSound) btnSound.textContent = state.soundEnabled ? 'SND' : 'MUTE';
     const overlay = document.getElementById('keyOverlay');
-    if (overlay) overlay.classList.toggle('hidden', !state.prefs.showKeyOverlay);
+    if (overlay) overlay.classList.remove('hidden');
   }
 
   function updateSystemStatus() {
@@ -1197,18 +1177,7 @@
     }).join('');
   }
 
-  function renderQuickKeys() {
-    const container = document.getElementById('quickKeys');
-    const chips = [];
-
-    Object.entries(state.mappings.mainTasks).forEach(([key, name]) => {
-      const subs = state.mappings.subTasks[key];
-      const subCount = subs ? Object.keys(subs).length : 0;
-      const hint = subCount ? ` <span class="chip-sub">+${subCount}</span>` : '';
-      chips.push(`<div class="key-chip"><kbd>${key}</kbd>${name}${hint}</div>`);
-    });
-
-    container.innerHTML = chips.join('');
+  function renderActiveCommands() {
     renderKeyOverlay();
   }
 
@@ -1231,8 +1200,8 @@
   function toggleKeyOverlay() {
     state.prefs.showKeyOverlay = !state.prefs.showKeyOverlay;
     localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
-    document.getElementById('keyOverlay').classList.toggle('hidden', !state.prefs.showKeyOverlay);
-    showToast(state.prefs.showKeyOverlay ? 'Key overlay ON' : 'Key overlay OFF');
+    document.getElementById('keyOverlay')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    showToast('Active commands pinned in live panel');
   }
 
   function renderHelpKeyList() {
@@ -1379,7 +1348,7 @@
     renderMainMappingList();
     renderSubMappingList();
     renderCategoryList();
-    renderQuickKeys();
+    renderActiveCommands();
     renderHelpKeyList();
     populateSubParentSelect();
   }
