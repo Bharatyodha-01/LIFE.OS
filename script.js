@@ -88,6 +88,7 @@
     users: [],
     chartRange: 'day',
     deferredInstallPrompt: null,
+    commandCentreExpanded: new Set(),
     isRestoringTask: false
   };
 
@@ -1219,9 +1220,11 @@
     let html = '<div class="command-tree" role="tree" aria-label="Command Centre">';
     Object.entries(state.mappings.mainTasks).forEach(([key, name]) => {
       const subs = state.mappings.subTasks[key] || {};
+      const subCount = Object.keys(subs).length;
       const isActiveParent = activeMainKey === key || activeMain === name;
       const isAwaiting = awaiting && awaiting.key === key;
       const isActiveMainOnly = isActiveParent && !activeSub && state.currentTask?.main === name;
+      const isExpanded = isActiveParent || state.commandCentreExpanded.has(key);
       const parentClasses = [
         'command-node',
         'command-parent',
@@ -1230,15 +1233,17 @@
         isAwaiting ? 'awaiting' : ''
       ].filter(Boolean).join(' ');
 
-      html += `<div class="command-group${isActiveParent ? ' active-group' : ''}" role="treeitem" aria-expanded="${Object.keys(subs).length > 0}">
-        <div class="${parentClasses}">
+      html += `<div class="command-group${isActiveParent ? ' active-group' : ''}" role="treeitem" aria-expanded="${isExpanded}">
+        <button class="${parentClasses}" type="button" data-command-toggle="${escapeHtml(key)}" aria-expanded="${isExpanded}">
+          <span class="command-arrow" aria-hidden="true">${isExpanded ? '▼' : '▶'}</span>
           <kbd class="command-key">[${escapeHtml(key)}]</kbd>
           <span class="command-label">${escapeHtml(name)}</span>
+          <span class="command-count">(${subCount})</span>
           ${isAwaiting ? '<span class="command-state">WAITING</span>' : ''}
           ${isActiveMainOnly ? '<span class="command-state">ACTIVE</span>' : ''}
-        </div>`;
+        </button>`;
 
-      if (Object.keys(subs).length > 0) {
+      if (isExpanded && subCount > 0) {
         html += '<div class="command-children" role="group">';
         Object.entries(subs).forEach(([sk, sn]) => {
           const isActiveSub = isActiveParent && activeSub === sn;
@@ -1257,12 +1262,29 @@
           </div>`;
         });
         html += '</div>';
+      } else if (isExpanded) {
+        html += `<div class="command-children command-empty-subkeys" role="group">
+          <div class="command-no-subkeys">No subkeys added yet. Go to Settings → Subtasks to add.</div>
+        </div>`;
       }
 
       html += '</div>';
     });
     html += '</div>';
     grid.innerHTML = html;
+
+    grid.querySelectorAll('[data-command-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.commandToggle;
+        if (!key || key === activeMainKey) return;
+        if (state.commandCentreExpanded.has(key)) state.commandCentreExpanded.delete(key);
+        else state.commandCentreExpanded.add(key);
+        renderActiveCommands();
+      });
+    });
+
+    const activeNode = grid.querySelector('.command-node.active-leaf, .command-group.active-group .command-parent');
+    if (activeNode) activeNode.scrollIntoView({ block: 'nearest' });
   }
 
   function toggleKeyOverlay() {

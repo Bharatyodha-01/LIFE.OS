@@ -1014,7 +1014,7 @@ input:focus, select:focus {
 .command-node {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(34px, auto) minmax(0, 1fr) auto;
+  grid-template-columns: 13px minmax(34px, auto) minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 7px;
   min-height: 24px;
@@ -1024,9 +1024,37 @@ input:focus, select:focus {
 }
 
 .command-parent {
+  appearance: none;
+  width: 100%;
   background: #101821;
   border: 1px solid #1a2a3a;
   font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.command-parent:hover {
+  border-color: #00b4ff77;
+  background: #12202a;
+}
+
+.command-parent:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.command-arrow {
+  color: var(--text-dim);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.command-count {
+  color: var(--text-dim);
+  font-size: 0.62rem;
 }
 
 .command-children {
@@ -1040,6 +1068,7 @@ input:focus, select:focus {
 }
 
 .command-child {
+  grid-template-columns: 10px minmax(34px, auto) minmax(0, 1fr) auto;
   color: var(--text-dim);
 }
 
@@ -1067,6 +1096,7 @@ input:focus, select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .command-state {
@@ -1080,6 +1110,7 @@ input:focus, select:focus {
 }
 
 .command-node.active-path .command-key,
+.command-node.active-path .command-arrow,
 .command-node.active-path .command-state {
   color: var(--accent);
 }
@@ -1096,8 +1127,22 @@ input:focus, select:focus {
 }
 
 .command-node.awaiting .command-key,
+.command-node.awaiting .command-arrow,
 .command-node.awaiting .command-state {
   color: var(--amber);
+}
+
+.command-empty-subkeys {
+  margin-left: 12px;
+}
+
+.command-no-subkeys {
+  padding: 6px 8px;
+  border: 1px dashed #1d3345;
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 0.64rem;
+  line-height: 1.35;
 }
 
 .command-empty {
@@ -1390,6 +1435,17 @@ body.pwa-standalone .command-bar {
   .right-column { flex-direction: row; flex-wrap: wrap; }
   .panel-analytics, .panel-recent { flex: 1; min-width: 280px; }
   .key-overlay { min-height: 180px; }
+  .key-overlay-grid { font-size: 0.72rem; }
+  .command-tree { gap: 5px; }
+  .command-group { padding-left: 6px; }
+  .command-node {
+    min-height: 34px;
+    padding: 6px 7px;
+    grid-template-columns: 14px minmax(34px, auto) minmax(0, 1fr) auto auto;
+  }
+  .command-child {
+    grid-template-columns: 10px minmax(34px, auto) minmax(0, 1fr) auto;
+  }
   .hide-mobile { display: none; }
   .header-right .btn { padding: 6px 8px; font-size: 0.65rem; }
   .creator-banner { font-size: 0.7rem; }
