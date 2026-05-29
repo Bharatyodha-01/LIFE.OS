@@ -15,7 +15,7 @@
 
   // ─── Constants ───────────────────────────────────────────────
   const STORAGE_PREFIX = 'lifeos_';
-  const RETENTION_DAYS = 7;
+  const RETENTION_DAYS = 90;
 
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
@@ -87,6 +87,7 @@
     activeUserId: 'user1',
     users: [],
     chartRange: 'day',
+    timelineRange: 'today',
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
     isRestoringTask: false
@@ -1021,6 +1022,166 @@
 
   // ─── UI Rendering ────────────────────────────────────────────
 
+  function getDayDataByKey(key) {
+    const raw = localStorage.getItem(userPrefix() + 'day_' + key);
+    if (raw) {
+      try { return JSON.parse(raw); } catch (e) { /* skip invalid day */ }
+    }
+    return { timeline: [], taskSwitches: 0 };
+  }
+
+  function addDays(date, offset) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+
+  function formatTimelineDate(date) {
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).toUpperCase();
+  }
+
+  function getTimelineRangeDays(range) {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    if (range === 'yesterday') return [addDays(today, -1)];
+
+    if (range === 'week') {
+      const dayOfWeek = today.getDay() || 7;
+      const start = addDays(today, 1 - dayOfWeek);
+      const days = [];
+      for (let d = new Date(today); d >= start; d = addDays(d, -1)) days.push(new Date(d));
+      return days;
+    }
+
+    if (range === 'month') {
+      const days = [];
+      for (let d = new Date(today); d.getMonth() === today.getMonth(); d = addDays(d, -1)) {
+        days.push(new Date(d));
+        if (d.getDate() === 1) break;
+      }
+      return days;
+    }
+
+    return [today];
+  }
+
+  function normalizeTimelineEntry(entry, dayKey, isActive = false) {
+    const start = Number(entry.start || entry.startTime || Date.now());
+    const end = Number(entry.end || (isActive ? Date.now() : start + (entry.durationMs || 0)));
+    return {
+      ...entry,
+      dayKey,
+      category: entry.category || getCategory(entry.main),
+      start,
+      end,
+      startFormatted: entry.startFormatted || formatTime(new Date(start)),
+      endFormatted: isActive ? 'NOW' : (entry.endFormatted || formatTime(new Date(end))),
+      durationMs: entry.durationMs || Math.max(0, end - start),
+      isActive
+    };
+  }
+
+  function getTimelineRangeModel(range) {
+    const days = getTimelineRangeDays(range);
+    const todayKey = dateKey();
+    const modelDays = days.map((date) => {
+      const key = dateKey(date);
+      const data = getDayDataByKey(key);
+      const entries = (data.timeline || []).map((entry) => normalizeTimelineEntry(entry, key, false));
+
+      if (key === todayKey && state.currentTask && range !== 'yesterday') {
+        entries.push(normalizeTimelineEntry({
+          main: state.currentTask.main,
+          sub: state.currentTask.sub,
+          category: getCategory(state.currentTask.main),
+          start: state.currentTask.startTime,
+          end: Date.now(),
+          durationMs: Date.now() - state.currentTask.startTime
+        }, key, true));
+      }
+
+      return { date, key, entries, switches: data.taskSwitches || 0 };
+    });
+
+    return {
+      range,
+      days: modelDays,
+      entries: modelDays.flatMap((day) => day.entries)
+    };
+  }
+
+  function summarizeEntries(entries, switches = 0) {
+    let totalMs = 0, productiveMs = 0, distractionMs = 0, studyMs = 0;
+    let longestMs = 0, longestLabel = '--', streakMs = 0;
+    const breakdown = {};
+
+    entries.forEach((entry) => {
+      const dur = entry.durationMs || 0;
+      totalMs += dur;
+      if (dur > longestMs) {
+        longestMs = dur;
+        longestLabel = entry.sub ? `${entry.main} > ${entry.sub}` : entry.main;
+      }
+
+      const cat = entry.category || getCategory(entry.main);
+      if (isProductiveCategory(cat)) productiveMs += dur;
+      if (cat === 'study' || entry.main === 'Study') studyMs += dur;
+      if (cat === 'distraction') distractionMs += dur;
+
+      const label = entry.sub ? `${entry.main} > ${entry.sub}` : entry.main;
+      breakdown[label] = (breakdown[label] || 0) + dur;
+    });
+
+    const ordered = [...entries].sort((a, b) => (a.end || 0) - (b.end || 0));
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const cat = ordered[i].category || getCategory(ordered[i].main);
+      if (isProductiveCategory(cat)) streakMs += ordered[i].durationMs || 0;
+      else break;
+    }
+
+    const mostUsed = Object.entries(breakdown).sort((a, b) => b[1] - a[1])[0];
+    return {
+      totalMs,
+      productiveMs,
+      distractionMs,
+      studyMs,
+      longestMs,
+      longestLabel,
+      streakMs,
+      switches,
+      productivePct: totalMs > 0 ? Math.round((productiveMs / totalMs) * 100) : 0,
+      mostUsedTask: mostUsed ? mostUsed[0] : '--'
+    };
+  }
+
+  function summarizeDay(day) {
+    return summarizeEntries(day.entries, day.switches);
+  }
+
+  function getMostProductiveDay(days) {
+    return days
+      .map((day) => ({ day, summary: summarizeDay(day) }))
+      .sort((a, b) => b.summary.productiveMs - a.summary.productiveMs)[0];
+  }
+
+  function getFocusTrend(days) {
+    const summaries = days.map((day) => summarizeDay(day));
+    const latest = summaries.slice(0, 7);
+    const previous = summaries.slice(7, 14);
+    const sum = (items) => items.reduce((total, item) => total + item.productiveMs, 0);
+    const latestAvg = latest.length ? sum(latest) / latest.length : 0;
+    const previousAvg = previous.length ? sum(previous) / previous.length : 0;
+    if (!latestAvg && !previousAvg) return 'No signal';
+    if (latestAvg > previousAvg * 1.05) return 'Rising';
+    if (latestAvg < previousAvg * 0.95) return 'Falling';
+    return 'Stable';
+  }
+
   function updateLivePanel() {
     const breadcrumb = document.getElementById('taskBreadcrumb');
     const badge = document.getElementById('taskCategoryBadge');
@@ -1085,35 +1246,119 @@
 
   function renderTimeline() {
     const list = document.getElementById('timelineList');
-    const dayData = getTodayData();
-    const entries = dayData.timeline || [];
+    const summaryEl = document.getElementById('timelineSummary');
+    const model = getTimelineRangeModel(state.timelineRange);
+    const entries = model.entries;
 
-    if (entries.length === 0 && !state.currentTask) {
-      list.innerHTML = '<div class="timeline-empty">No activity logged yet. Press a key to begin.</div>';
+    renderTimelineSummary(model);
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="timeline-empty">No activity logged for this range.</div>';
+      if (summaryEl) summaryEl.classList.add('is-empty');
       return;
     }
+    if (summaryEl) summaryEl.classList.remove('is-empty');
 
-    const displayEntries = [...entries];
-    if (state.prefs.timelineNewestFirst) displayEntries.reverse();
-
-    let html = displayEntries.map(entry => timelineEntryHTML(entry, false)).join('');
-
-    if (state.currentTask) {
-      const activeHtml = timelineEntryHTML({
-        main: state.currentTask.main,
-        sub: state.currentTask.sub,
-        category: getCategory(state.currentTask.main),
-        startFormatted: formatTime(new Date(state.currentTask.startTime)),
-        endFormatted: 'NOW',
-        durationMs: Date.now() - state.currentTask.startTime
-      }, true);
-      html = state.prefs.timelineNewestFirst ? activeHtml + html : html + activeHtml;
+    if (state.timelineRange === 'today' || state.timelineRange === 'yesterday') {
+      const displayEntries = [...entries];
+      if (state.prefs.timelineNewestFirst) displayEntries.reverse();
+      list.innerHTML = displayEntries.map(entry => timelineEntryHTML(entry, entry.isActive)).join('');
+    } else {
+      list.innerHTML = model.days
+        .filter((day) => day.entries.length > 0)
+        .map(dayTimelineHTML)
+        .join('');
     }
-
-    list.innerHTML = html;
 
     const activeRow = list.querySelector('.timeline-entry.active');
     if (activeRow) activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function renderTimelineSummary(model) {
+    const container = document.getElementById('timelineSummary');
+    if (!container) return;
+
+    const switches = model.days.reduce((total, day) => total + day.switches, 0);
+    const summary = summarizeEntries(model.entries, switches);
+    const bestDay = getMostProductiveDay(model.days);
+    const bestDayLabel = bestDay && bestDay.summary.productiveMs > 0
+      ? formatTimelineDate(bestDay.day.date)
+      : '--';
+
+    const metricSets = {
+      today: [
+        ['Total Tracked', formatDurationHuman(summary.totalMs)],
+        ['Productive', formatDurationHuman(summary.productiveMs)],
+        ['Distraction', formatDurationHuman(summary.distractionMs)],
+        ['Most Used', summary.mostUsedTask],
+        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Focus Streak', formatDurationHuman(summary.streakMs)]
+      ],
+      yesterday: [
+        ['Total Tracked', formatDurationHuman(summary.totalMs)],
+        ['Productive', formatDurationHuman(summary.productiveMs)],
+        ['Distraction', formatDurationHuman(summary.distractionMs)],
+        ['Most Used', summary.mostUsedTask],
+        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Task Switches', String(summary.switches)]
+      ],
+      week: [
+        ['Total Tracked', formatDurationHuman(summary.totalMs)],
+        ['Productive Time', formatDurationHuman(summary.productiveMs)],
+        ['Distraction Time', formatDurationHuman(summary.distractionMs)],
+        ['Most Used Task', summary.mostUsedTask],
+        ['Most Productive Day', bestDayLabel],
+        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Focus Streak', formatDurationHuman(summary.streakMs)],
+        ['Task Switches', String(summary.switches)]
+      ],
+      month: [
+        ['Total Tracked', formatDurationHuman(summary.totalMs)],
+        ['Productive %', `${summary.productivePct}%`],
+        ['Most Used Task', summary.mostUsedTask],
+        ['Most Productive Day', bestDayLabel],
+        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Focus Trend', getFocusTrend(model.days)],
+        ['Study Time', formatDurationHuman(summary.studyMs)],
+        ['Distraction Time', formatDurationHuman(summary.distractionMs)]
+      ]
+    };
+
+    const title = {
+      today: 'TODAY',
+      yesterday: 'YESTERDAY',
+      week: 'THIS WEEK',
+      month: 'THIS MONTH'
+    }[model.range] || 'TODAY';
+
+    container.innerHTML = `<div class="mission-analysis">
+      <div class="mission-analysis-title"><span>MISSION ANALYSIS</span><strong>${title}</strong></div>
+      <div class="mission-metrics">
+        ${metricSets[model.range].map(([label, value]) => `
+          <div class="mission-metric">
+            <span>${label}</span>
+            <strong>${value}</strong>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  function dayTimelineHTML(day) {
+    const summary = summarizeDay(day);
+    const entries = [...day.entries].sort((a, b) => (b.start || 0) - (a.start || 0));
+    return `<section class="timeline-day">
+      <div class="timeline-day-header">
+        <h3>${formatTimelineDate(day.date)}</h3>
+        <div class="timeline-day-stats">
+          <span>Tracked: <strong>${formatDurationHuman(summary.totalMs)}</strong></span>
+          <span>Productive: <strong>${formatDurationHuman(summary.productiveMs)}</strong></span>
+        </div>
+      </div>
+      <div class="timeline-day-entries">
+        ${entries.map(entry => timelineEntryHTML(entry, entry.isActive)).join('')}
+      </div>
+    </section>`;
   }
 
   function timelineEntryHTML(entry, isActive) {
@@ -1620,6 +1865,15 @@
 
     document.getElementById('btnExportJson').addEventListener('click', exportTimelineJson);
     document.getElementById('btnExportCsv').addEventListener('click', exportTimelineCsv);
+
+    document.querySelectorAll('[data-timeline-range]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.timelineRange = btn.dataset.timelineRange || 'today';
+        document.querySelectorAll('[data-timeline-range]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTimeline();
+      });
+    });
 
     // Settings tabs only (not chart range buttons)
     document.querySelectorAll('.settings-tabs .tab').forEach(tab => {

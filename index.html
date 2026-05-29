@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260529-command-centre-dropdowns">
+  <link rel="stylesheet" href="style.css?v=20260529-timeline-analytics">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -111,12 +111,19 @@
 
     <section class="panel panel-timeline">
       <div class="panel-header">
-        <span class="panel-tag">LOG</span><h2>Daily Timeline</h2>
+        <span class="panel-tag">LOG</span><h2>Timeline Analytics</h2>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnExportJson" type="button">JSON</button>
           <button class="btn btn-sm" id="btnExportCsv" type="button">CSV</button>
         </div>
       </div>
+      <div class="timeline-range-tabs" id="timelineRangeTabs">
+        <button class="timeline-range-btn active" data-timeline-range="today" type="button">Today</button>
+        <button class="timeline-range-btn" data-timeline-range="yesterday" type="button">Yesterday</button>
+        <button class="timeline-range-btn" data-timeline-range="week" type="button">This Week</button>
+        <button class="timeline-range-btn" data-timeline-range="month" type="button">This Month</button>
+      </div>
+      <div class="timeline-summary" id="timelineSummary"></div>
       <div class="timeline-list" id="timelineList">
         <div class="timeline-empty">No activity logged yet. Press a key to begin.</div>
       </div>
@@ -327,6 +334,6 @@
   <div class="toast hidden" id="toast"></div>
 
   <script src="charts.js"></script>
-  <script src="script.js?v=20260529-command-centre-dropdowns"></script>
+  <script src="script.js?v=20260529-timeline-analytics"></script>
 </body>
 </html>

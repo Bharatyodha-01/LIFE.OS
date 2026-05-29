@@ -2,7 +2,7 @@
  * LIFE OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v5-command-centre-dropdowns';
+const CACHE_NAME = 'lifeos-pwa-v6-timeline-analytics';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -10,10 +10,10 @@ const PRECACHE = [
   './',
   './index.html',
   './style.css',
-  './style.css?v=20260529-command-centre-dropdowns',
+  './style.css?v=20260529-timeline-analytics',
   './script.js',
   './script.js?v=20260529-key-context',
-  './script.js?v=20260529-command-centre-dropdowns',
+  './script.js?v=20260529-timeline-analytics',
   './charts.js',
   './manifest.json',
   './offline.html',
