@@ -1,4 +1,4 @@
-"""Generate LIFE_OS PWA icons from assets/life-os-logo.png."""
+"""Generate LIFE-OS PWA icons from assets/life-os-logo.png."""
 from pathlib import Path
 
 from PIL import Image
@@ -31,7 +31,7 @@ def main():
 
     favicon = fit_on_transparent_canvas(image, 256)
     favicon.save(ROOT / "favicon.ico", sizes=FAVICON_SIZES)
-    print(f"Generated LIFE_OS icons from {SOURCE}")
+    print(f"Generated LIFE-OS icons from {SOURCE}")
 
 
 if __name__ == "__main__":

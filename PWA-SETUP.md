@@ -1,6 +1,6 @@
-# LIFE OS — Progressive Web App (PWA) Setup
+# LIFE-OS — Progressive Web App (PWA) Setup
 
-LIFE OS can be installed on **Android phones** and **desktop/laptop** like a native app. All your data stays in **localStorage** on the device (per user profile).
+LIFE-OS can be installed on **Android phones** and **desktop/laptop** like a native app. All your data stays in **localStorage** on the device (per user profile).
 
 ---
 
@@ -11,7 +11,7 @@ LIFE OS can be installed on **Android phones** and **desktop/laptop** like a nat
 | `manifest.json` | App name, icons, colors, standalone display |
 | `sw.js` | Service worker — offline cache |
 | `offline.html` | Shown if you open offline before first cache |
-| `assets/life-os-logo.png` | Official LIFE_OS source logo |
+| `assets/life-os-logo.png` | Official LIFE-OS source logo |
 | `icons/` | PNG icons (72–512px) generated from the official logo |
 | `generate-icons.py` | Regenerate PNG icons and favicon from the official logo |
 
@@ -75,7 +75,7 @@ Use the **Live Server** extension → Open with Live Server.
 1. Deploy or open the app on **HTTPS** or your PC’s LAN IP (e.g. `http://192.168.1.5:8080`) on the same Wi‑Fi.
 2. Open in **Chrome**.
 3. Use one of:
-   - Tap the **Install LIFE OS** banner → **Install**
+   - Tap the **Install LIFE-OS** banner → **Install**
    - Chrome menu **⋮** → **Install app** or **Add to Home screen**
 4. The icon appears on your home screen.
 5. Open it — runs **fullscreen** (no browser bar), like a native app.
@@ -91,8 +91,8 @@ Use the **Live Server** extension → Open with Live Server.
 
 1. Run via local server (see above) or host on HTTPS.
 2. Look for the **install icon** in the address bar (⊕ or computer icon).
-3. Or use the in-app **Install LIFE OS** banner / **Preferences → Install App**.
-4. LIFE OS opens in its own window without tabs.
+3. Or use the in-app **Install LIFE-OS** banner / **Preferences → Install App**.
+4. LIFE-OS opens in its own window without tabs.
 
 ### Already installed?
 
@@ -111,7 +111,7 @@ The app runs in **standalone** mode — your mappings and timeline are still in 
 
 ## Install prompt in the app
 
-- A top **Install LIFE OS** bar appears when the browser supports install.
+- A top **Install LIFE-OS** bar appears when the browser supports install.
 - **Later** hides it until you clear site data.
 - **Preferences** tab also has **Install App**.
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   LIFE OS — Cyberpunk Mission Control Theme
+   LIFE-OS — Cyberpunk Mission Control Theme
    ============================================================ */
 
 :root {
@@ -8,8 +8,8 @@
   --bg-panel-alt: #0f1419;
   --border: #1a2a3a;
   --border-glow: #00ff9d33;
-  --text: #c8d6e5;
-  --text-dim: #8aa6b8;
+  --text: #ffffff;
+  --text-dim: #ffffff;
   --accent: #00ff9d;
   --accent-dim: #00cc7d;
   --blue: #00b4ff;
@@ -120,8 +120,16 @@ body.pwa-standalone {
   flex-direction: column;
   justify-content: center;
   min-width: 0;
+  gap: 3px;
   line-height: 1;
   text-align: left;
+}
+
+.brand-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
 }
 
 .brand-name {
@@ -135,8 +143,8 @@ body.pwa-standalone {
 
 .brand-subtitle {
   color: var(--text);
-  font-size: 0.52rem;
-  letter-spacing: 0.08em;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
 }
 
 .logo {
@@ -149,8 +157,8 @@ body.pwa-standalone {
 .logo .accent { color: var(--accent); text-shadow: var(--glow-green); }
 
 .brand-credit {
-  color: #7ee7ff;
-  font-size: 0.48rem;
+  color: var(--text);
+  font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -1788,8 +1796,8 @@ body.pwa-standalone .command-bar {
   .logo { font-size: 1.25rem; }
   .brand-logo { width: 22px; height: 22px; }
   .brand-name { font-size: 0.78rem; }
-  .brand-subtitle { font-size: 0.5rem; }
-  .brand-credit { font-size: 0.46rem; }
+  .brand-subtitle { font-size: 0.6rem; }
+  .brand-credit { font-size: 0.54rem; }
 
   .command-bar {
     display: none;

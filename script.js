@@ -1,5 +1,5 @@
 /**
- * LIFE OS — Real-Time Activity Tracking System
+ * LIFE-OS — Real-Time Activity Tracking System
  * =============================================
  * A keyboard-driven life operating system that tracks activities in real time.
  *
@@ -117,12 +117,12 @@
     const activeTask = normalizeActiveTask(state.currentTask);
     if (!activeTask) return;
 
-    console.log('[LIFE OS] SAVING ACTIVE TASK:', activeTask.main, activeTask.sub || '', 'startedAt:', activeTask.startedAt);
+    console.log('[LIFE-OS] SAVING ACTIVE TASK:', activeTask.main, activeTask.sub || '', 'startedAt:', activeTask.startedAt);
     localStorage.setItem(sessionActiveKey(), JSON.stringify(activeTask));
   }
 
   function removeActiveTask() {
-    console.log('[LIFE OS] REMOVING ACTIVE TASK');
+    console.log('[LIFE-OS] REMOVING ACTIVE TASK');
     localStorage.removeItem(sessionActiveKey());
   }
 
@@ -132,7 +132,7 @@
     try {
       const restored = normalizeActiveTask(JSON.parse(raw));
       if (restored) {
-        console.log('[LIFE OS] RESTORING ACTIVE TASK:', restored.main, restored.sub || '', 'startedAt:', restored.startedAt, 'elapsed:', Date.now() - restored.startedAt, 'ms');
+        console.log('[LIFE-OS] RESTORING ACTIVE TASK:', restored.main, restored.sub || '', 'startedAt:', restored.startedAt, 'elapsed:', Date.now() - restored.startedAt, 'ms');
         return restored;
       }
     } catch (e) { /* ignore invalid saved task */ }
@@ -513,11 +513,11 @@
     } else if (state.currentTask) {
       el.textContent = 'TRACKING ACTIVE';
       el.style.color = 'var(--accent)';
-      console.log('[LIFE OS] System status: TRACKING ACTIVE -', state.currentTask.main, state.currentTask.sub || '');
+      console.log('[LIFE-OS] System status: TRACKING ACTIVE -', state.currentTask.main, state.currentTask.sub || '');
     } else {
       el.textContent = 'STANDBY';
       el.style.color = '';
-      console.log('[LIFE OS] System status: STANDBY');
+      console.log('[LIFE-OS] System status: STANDBY');
     }
   }
 
@@ -730,8 +730,8 @@
   function endCurrentTask(endTime = new Date()) {
     if (!state.currentTask) return;
     
-    console.trace('[LIFE OS] endCurrentTask called');
-    console.log('[LIFE OS] endCurrentTask ending:', state.currentTask.main, state.currentTask.sub || '');
+    console.trace('[LIFE-OS] endCurrentTask called');
+    console.log('[LIFE-OS] endCurrentTask ending:', state.currentTask.main, state.currentTask.sub || '');
 
     const entry = {
       main: state.currentTask.main,
@@ -772,7 +772,7 @@
       previousTask.main === mainName &&
       previousTask.sub === (subName || null)
     ) {
-      console.log('[LIFE OS] Prevented duplicate task start during restoration:', mainName, subName || '');
+      console.log('[LIFE-OS] Prevented duplicate task start during restoration:', mainName, subName || '');
       return;
     }
     state.currentTask = {
@@ -2112,7 +2112,7 @@
     window.addEventListener('appinstalled', () => {
       state.deferredInstallPrompt = null;
       document.getElementById('installBanner')?.classList.add('hidden');
-      showToast('LIFE OS installed!');
+      showToast('LIFE-OS installed!');
     });
 
     document.getElementById('btnInstallBanner')?.addEventListener('click', promptInstallApp);
@@ -2150,27 +2150,27 @@
     loadMappings();
 
     // PHASE 1: Restore active task BEFORE the first UI render
-    console.log('[LIFE OS] init() PHASE 1: Starting task restoration');
+    console.log('[LIFE-OS] init() PHASE 1: Starting task restoration');
     state.isRestoringTask = true;
     const restoredTask = restoreCurrentActiveTask();
     if (restoredTask) {
-      console.log('[LIFE OS] Active task restored in init():', restoredTask.main, restoredTask.sub || '');
+      console.log('[LIFE-OS] Active task restored in init():', restoredTask.main, restoredTask.sub || '');
     }
 
     // PHASE 2: Setup events and UI (with restoration flag still active)
-    console.log('[LIFE OS] init() PHASE 2: Binding events and rendering UI');
+    console.log('[LIFE-OS] init() PHASE 2: Binding events and rendering UI');
     bindEvents();
     setupMobileKeyboard();
     setupPWA();
     refreshAllUI();
 
     // PHASE 3: END restoration phase - now safe to accept key input
-    console.log('[LIFE OS] init() PHASE 3: Completing restoration phase');
+    console.log('[LIFE-OS] init() PHASE 3: Completing restoration phase');
     state.isRestoringTask = false;
 
     // PHASE 4: If task was restored, ensure UI is fully synced
     if (restoredTask) {
-      console.log('[LIFE OS] init() PHASE 4: Syncing restored task UI');
+      console.log('[LIFE-OS] init() PHASE 4: Syncing restored task UI');
       updateLivePanel();
       tickTimer();
       updateSystemStatus();
@@ -2181,7 +2181,7 @@
     // NOTE: beforeunload only SAVES the active task. It NEVER removes or clears it.
     window.addEventListener('beforeunload', () => {
       saveCurrentActiveTask();
-      console.log('[LIFE OS] beforeunload: active task saved');
+      console.log('[LIFE-OS] beforeunload: active task saved');
     });
     window.addEventListener('pagehide', saveCurrentActiveTask);
     document.addEventListener('visibilitychange', () => {
@@ -2192,7 +2192,7 @@
     setInterval(tickTimer, 1000);
     tickTimer();
 
-    console.log('%c LIFE OS ONLINE ', 'background:#00ff9d;color:#000;font-weight:bold;padding:4px 8px;');
+    console.log('%c LIFE-OS ONLINE ', 'background:#00ff9d;color:#000;font-weight:bold;padding:4px 8px;');
     console.log('Press any mapped key to start tracking. Ctrl+K settings, ` overlay.');
   }
 
