@@ -52,6 +52,38 @@ body.pwa-standalone {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Launch splash */
+.launch-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  background: #000000;
+  pointer-events: none;
+  animation: launch-splash-fade 2200ms ease forwards;
+  will-change: opacity;
+}
+
+.launch-splash-logo {
+  display: block;
+  width: min(220px, 42vw, 34vh);
+  height: auto;
+  object-fit: contain;
+}
+
+.splash-seen .launch-splash,
+.launch-splash.is-dismissed {
+  display: none;
+}
+
+@keyframes launch-splash-fade {
+  0% { opacity: 0; }
+  27.2727% { opacity: 1; }
+  72.7273% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Background effects */
 .grid-bg {
   position: fixed;

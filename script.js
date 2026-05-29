@@ -16,6 +16,7 @@
   // ─── Constants ───────────────────────────────────────────────
   const STORAGE_PREFIX = 'lifeos_';
   const RETENTION_DAYS = 90;
+  const LAUNCH_SPLASH_KEY = 'lifeos_launch_splash_seen';
 
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
@@ -89,6 +90,30 @@
     commandCentreExpanded: new Set(),
     isRestoringTask: false
   };
+
+  function setupLaunchSplash() {
+    const splash = document.getElementById('launchSplash');
+    if (!splash) return;
+
+    try {
+      if (sessionStorage.getItem(LAUNCH_SPLASH_KEY) === '1') {
+        splash.remove();
+        return;
+      }
+      sessionStorage.setItem(LAUNCH_SPLASH_KEY, '1');
+    } catch (error) {
+      splash.remove();
+      return;
+    }
+
+    const dismiss = () => {
+      splash.classList.add('is-dismissed');
+      splash.remove();
+    };
+
+    splash.addEventListener('animationend', dismiss, { once: true });
+    window.setTimeout(dismiss, 2300);
+  }
 
   function userPrefix() {
     return STORAGE_PREFIX + 'u_' + state.activeUserId + '_';
@@ -2144,6 +2169,8 @@
   // ─── Initialize ──────────────────────────────────────────────
 
   function init() {
+    setupLaunchSplash();
+
     loadUsers();
     migrateLegacyData();
     loadPreferences();
