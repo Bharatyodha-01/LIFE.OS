@@ -810,6 +810,7 @@
     flashTaskSwitch();
     playSwitchSound();
     updateLivePanel();
+    renderActiveCommands();
     renderTimeline();
     updateTodaySummary();
     updateSystemStatus();
@@ -841,6 +842,7 @@
 
     playWaitSound();
     updateSystemStatus();
+    renderActiveCommands();
 
     let remaining = waitMs;
     const countdownEl = document.getElementById('subtaskCountdown');
@@ -875,6 +877,7 @@
     document.getElementById('subtaskHints').innerHTML = '';
     document.getElementById('statusDot').className = 'status-dot';
     updateSystemStatus();
+    renderActiveCommands();
   }
 
   /** Resolve key from keyboard event (handles layout quirks) */
@@ -1181,19 +1184,84 @@
     renderKeyOverlay();
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function findMainKeyForTask(mainName) {
+    const match = Object.entries(state.mappings.mainTasks)
+      .find(([, name]) => name === mainName);
+    return match ? match[0] : null;
+  }
+
   function renderKeyOverlay() {
     const grid = document.getElementById('keyOverlayGrid');
     if (!grid) return;
-    let html = '';
+
+    const awaiting = getAwaitingSubtaskContext();
+    const activeMainKey = awaiting
+      ? awaiting.key
+      : (state.currentTask?.mainKey || findMainKeyForTask(state.currentTask?.main));
+    const activeSub = awaiting ? null : (state.currentTask?.sub || null);
+    const activeMain = awaiting ? awaiting.name : (state.currentTask?.main || null);
+
+    const entries = Object.entries(state.mappings.mainTasks);
+    if (entries.length === 0) {
+      grid.innerHTML = '<div class="command-empty">No commands configured.</div>';
+      return;
+    }
+
+    let html = '<div class="command-tree" role="tree" aria-label="Command Centre">';
     Object.entries(state.mappings.mainTasks).forEach(([key, name]) => {
-      html += `<div class="key-overlay-item"><kbd>${key}</kbd> ${name}</div>`;
-      const subs = state.mappings.subTasks[key];
-      if (subs) {
+      const subs = state.mappings.subTasks[key] || {};
+      const isActiveParent = activeMainKey === key || activeMain === name;
+      const isAwaiting = awaiting && awaiting.key === key;
+      const isActiveMainOnly = isActiveParent && !activeSub && state.currentTask?.main === name;
+      const parentClasses = [
+        'command-node',
+        'command-parent',
+        isActiveParent ? 'active-path' : '',
+        isActiveMainOnly ? 'active-leaf' : '',
+        isAwaiting ? 'awaiting' : ''
+      ].filter(Boolean).join(' ');
+
+      html += `<div class="command-group${isActiveParent ? ' active-group' : ''}" role="treeitem" aria-expanded="${Object.keys(subs).length > 0}">
+        <div class="${parentClasses}">
+          <kbd class="command-key">[${escapeHtml(key)}]</kbd>
+          <span class="command-label">${escapeHtml(name)}</span>
+          ${isAwaiting ? '<span class="command-state">WAITING</span>' : ''}
+          ${isActiveMainOnly ? '<span class="command-state">ACTIVE</span>' : ''}
+        </div>`;
+
+      if (Object.keys(subs).length > 0) {
+        html += '<div class="command-children" role="group">';
         Object.entries(subs).forEach(([sk, sn]) => {
-          html += `<div class="key-overlay-item sub"><kbd>${sk}</kbd> ${sn}</div>`;
+          const isActiveSub = isActiveParent && activeSub === sn;
+          const childClasses = [
+            'command-node',
+            'command-child',
+            isActiveParent ? 'active-path' : '',
+            isActiveSub ? 'active-leaf' : ''
+          ].filter(Boolean).join(' ');
+
+          html += `<div class="${childClasses}" role="treeitem">
+            <span class="command-branch" aria-hidden="true"></span>
+            <kbd class="command-key">[${escapeHtml(sk)}]</kbd>
+            <span class="command-label">${escapeHtml(sn)}</span>
+            ${isActiveSub ? '<span class="command-state">ACTIVE</span>' : ''}
+          </div>`;
         });
+        html += '</div>';
       }
+
+      html += '</div>';
     });
+    html += '</div>';
     grid.innerHTML = html;
   }
 
@@ -1201,7 +1269,7 @@
     state.prefs.showKeyOverlay = !state.prefs.showKeyOverlay;
     localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
     document.getElementById('keyOverlay')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    showToast('Active commands pinned in live panel');
+    showToast('Command Centre pinned in live panel');
   }
 
   function renderHelpKeyList() {

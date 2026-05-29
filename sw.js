@@ -2,7 +2,7 @@
  * LIFE OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v3-active-commands-left';
+const CACHE_NAME = 'lifeos-pwa-v4-command-centre';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -10,10 +10,10 @@ const PRECACHE = [
   './',
   './index.html',
   './style.css',
-  './style.css?v=20260529-active-commands-left',
+  './style.css?v=20260529-command-centre',
   './script.js',
   './script.js?v=20260529-key-context',
-  './script.js?v=20260529-active-commands-left',
+  './script.js?v=20260529-command-centre',
   './charts.js',
   './manifest.json',
   './offline.html',
