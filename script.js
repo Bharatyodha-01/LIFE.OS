@@ -1116,8 +1116,8 @@
   }
 
   function summarizeEntries(entries, switches = 0) {
-    let totalMs = 0, productiveMs = 0, distractionMs = 0, studyMs = 0;
-    let longestMs = 0, longestLabel = '--', streakMs = 0;
+    let totalMs = 0, productiveMs = 0, distractionMs = 0, neutralMs = 0, studyMs = 0;
+    let longestMs = 0, longestLabel = '--';
     const breakdown = {};
 
     entries.forEach((entry) => {
@@ -1132,30 +1132,29 @@
       if (isProductiveCategory(cat)) productiveMs += dur;
       if (cat === 'study' || entry.main === 'Study') studyMs += dur;
       if (cat === 'distraction') distractionMs += dur;
+      if (!isProductiveCategory(cat) && cat !== 'distraction') neutralMs += dur;
 
       const label = entry.sub ? `${entry.main} > ${entry.sub}` : entry.main;
       breakdown[label] = (breakdown[label] || 0) + dur;
     });
 
-    const ordered = [...entries].sort((a, b) => (a.end || 0) - (b.end || 0));
-    for (let i = ordered.length - 1; i >= 0; i--) {
-      const cat = ordered[i].category || getCategory(ordered[i].main);
-      if (isProductiveCategory(cat)) streakMs += ordered[i].durationMs || 0;
-      else break;
-    }
-
     const mostUsed = Object.entries(breakdown).sort((a, b) => b[1] - a[1])[0];
+    const taskSummary = Object.entries(breakdown)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, durationMs]) => ({ label, durationMs }));
+
     return {
       totalMs,
       productiveMs,
       distractionMs,
+      neutralMs,
       studyMs,
       longestMs,
       longestLabel,
-      streakMs,
       switches,
       productivePct: totalMs > 0 ? Math.round((productiveMs / totalMs) * 100) : 0,
-      mostUsedTask: mostUsed ? mostUsed[0] : '--'
+      mostUsedTask: mostUsed ? mostUsed[0] : '--',
+      taskSummary
     };
   }
 
@@ -1290,37 +1289,43 @@
         ['Total Tracked', formatDurationHuman(summary.totalMs)],
         ['Productive', formatDurationHuman(summary.productiveMs)],
         ['Distraction', formatDurationHuman(summary.distractionMs)],
+        ['Neutral', formatDurationHuman(summary.neutralMs)],
+        ['Productivity Score', summary.productivePct, 'score'],
         ['Most Used', summary.mostUsedTask],
-        ['Longest Session', formatDurationHuman(summary.longestMs)],
-        ['Focus Streak', formatDurationHuman(summary.streakMs)]
+        ['Longest Session', summary.longestLabel, 'longest']
       ],
       yesterday: [
         ['Total Tracked', formatDurationHuman(summary.totalMs)],
         ['Productive', formatDurationHuman(summary.productiveMs)],
         ['Distraction', formatDurationHuman(summary.distractionMs)],
+        ['Neutral', formatDurationHuman(summary.neutralMs)],
+        ['Productivity Score', summary.productivePct, 'score'],
         ['Most Used', summary.mostUsedTask],
-        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Longest Session', summary.longestLabel, 'longest'],
         ['Task Switches', String(summary.switches)]
       ],
       week: [
         ['Total Tracked', formatDurationHuman(summary.totalMs)],
         ['Productive Time', formatDurationHuman(summary.productiveMs)],
         ['Distraction Time', formatDurationHuman(summary.distractionMs)],
+        ['Neutral Time', formatDurationHuman(summary.neutralMs)],
+        ['Productivity Score', summary.productivePct, 'score'],
         ['Most Used Task', summary.mostUsedTask],
         ['Most Productive Day', bestDayLabel],
-        ['Longest Session', formatDurationHuman(summary.longestMs)],
-        ['Focus Streak', formatDurationHuman(summary.streakMs)],
+        ['Longest Session', summary.longestLabel, 'longest'],
         ['Task Switches', String(summary.switches)]
       ],
       month: [
         ['Total Tracked', formatDurationHuman(summary.totalMs)],
-        ['Productive %', `${summary.productivePct}%`],
+        ['Productive Time', formatDurationHuman(summary.productiveMs)],
+        ['Distraction Time', formatDurationHuman(summary.distractionMs)],
+        ['Neutral Time', formatDurationHuman(summary.neutralMs)],
+        ['Productivity Score', summary.productivePct, 'score'],
         ['Most Used Task', summary.mostUsedTask],
         ['Most Productive Day', bestDayLabel],
-        ['Longest Session', formatDurationHuman(summary.longestMs)],
+        ['Longest Session', summary.longestLabel, 'longest'],
         ['Focus Trend', getFocusTrend(model.days)],
-        ['Study Time', formatDurationHuman(summary.studyMs)],
-        ['Distraction Time', formatDurationHuman(summary.distractionMs)]
+        ['Study Time', formatDurationHuman(summary.studyMs)]
       ]
     };
 
@@ -1334,14 +1339,48 @@
     container.innerHTML = `<div class="mission-analysis">
       <div class="mission-analysis-title"><span>MISSION ANALYSIS</span><strong>${title}</strong></div>
       <div class="mission-metrics">
-        ${metricSets[model.range].map(([label, value]) => `
-          <div class="mission-metric">
-            <span>${label}</span>
-            <strong>${value}</strong>
-          </div>
-        `).join('')}
+        ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
+      </div>
+      <div class="task-summary">
+        <div class="task-summary-title">TASK SUMMARY</div>
+        <div class="task-summary-grid">
+          ${taskSummaryHTML(summary.taskSummary)}
+        </div>
       </div>
     </div>`;
+  }
+
+  function missionMetricHTML([label, value, type], summary) {
+    if (type === 'score') {
+      const pct = Number(value) || 0;
+      return `<div class="mission-metric mission-score">
+        <span>${label}</span>
+        <strong>${pct}%</strong>
+        <div class="mission-score-bar"><div style="width:${pct}%"></div></div>
+      </div>`;
+    }
+
+    if (type === 'longest') {
+      return `<div class="mission-metric mission-longest">
+        <span>${label}</span>
+        <strong>${escapeHtml(value || '--')}</strong>
+        <em>${formatDurationHuman(summary.longestMs)}</em>
+      </div>`;
+    }
+
+    return `<div class="mission-metric">
+      <span>${label}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>`;
+  }
+
+  function taskSummaryHTML(tasks) {
+    if (!tasks.length) return '<div class="task-summary-empty">No task data for this range.</div>';
+    return tasks.map((task, index) => `<div class="task-summary-row">
+      <span class="task-rank">${String(index + 1).padStart(2, '0')}</span>
+      <strong>${escapeHtml(task.label)}</strong>
+      <span>${formatDurationHuman(task.durationMs)}</span>
+    </div>`).join('');
   }
 
   function dayTimelineHTML(day) {

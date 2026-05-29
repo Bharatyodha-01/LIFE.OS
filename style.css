@@ -470,6 +470,96 @@ body.pwa-standalone {
   text-overflow: ellipsis;
 }
 
+.mission-longest strong {
+  color: var(--accent);
+}
+
+.mission-longest em {
+  display: block;
+  margin-top: 2px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.mission-score strong {
+  color: var(--accent);
+  text-shadow: var(--glow-green);
+}
+
+.mission-score-bar {
+  height: 5px;
+  margin-top: 6px;
+  background: var(--bg-deep);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mission-score-bar div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  border-radius: 2px;
+}
+
+.task-summary {
+  border-top: 1px solid var(--border);
+  padding: 9px 10px 10px;
+  background: #090e13;
+}
+
+.task-summary-title {
+  color: var(--blue);
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  margin-bottom: 8px;
+}
+
+.task-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.task-summary-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #1a2a3a;
+  border-radius: 3px;
+  background: #0c1218;
+  font-size: 0.66rem;
+}
+
+.task-summary-row .task-rank {
+  color: var(--text-dim);
+  font-size: 0.56rem;
+}
+
+.task-summary-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.task-summary-row > span:last-child {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-summary-empty {
+  grid-column: 1 / -1;
+  color: var(--text-dim);
+  font-size: 0.66rem;
+}
+
 .timeline-list {
   flex: 1;
   overflow-y: auto;
@@ -1588,6 +1678,7 @@ body.pwa-standalone .command-bar {
   .panel-analytics, .panel-recent { flex: 1; min-width: 280px; }
   .timeline-range-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mission-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .task-summary-grid { grid-template-columns: 1fr; }
   .timeline-entry {
     grid-template-columns: 1fr;
     gap: 4px;
