@@ -2,7 +2,7 @@
  * LIFE OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v1';
+const CACHE_NAME = 'lifeos-pwa-v2-key-context';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -11,6 +11,7 @@ const PRECACHE = [
   './index.html',
   './style.css',
   './script.js',
+  './script.js?v=20260529-key-context',
   './charts.js',
   './manifest.json',
   './offline.html',
@@ -59,19 +60,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin assets: cache first, then network
+  // Same-origin assets: network first so updated JS/CSS is not trapped by an old PWA cache.
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(event.request, copy));
-          }
-          return res;
-        }).catch(() => cached);
-      })
+      fetch(event.request).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, copy));
+        }
+        return res;
+      }).catch(() =>
+        caches.match(event.request)
+      )
     );
     return;
   }
