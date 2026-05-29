@@ -5,14 +5,19 @@
   'use strict';
 
   const COLORS = {
-    productive: '#00ff9d',
-    study: '#00b4ff',
-    neutral: '#8a9bab',
+    productive: '#1e7bff',
+    study: '#1e7bff',
+    neutral: '#00ff9d',
     distraction: '#ff3355',
-    rest: '#ffaa00'
+    rest: '#00ff9d'
   };
 
-  const PALETTE = ['#00ff9d', '#00b4ff', '#7dffcf', '#4de8ff', '#a6ff00', '#b478ff', '#ff78c8', '#ffaa00'];
+  const PALETTES = {
+    productive: ['#1e7bff', '#4c9bff', '#6fb0ff', '#00b4ff'],
+    study: ['#1e7bff', '#4c9bff', '#6fb0ff', '#00b4ff'],
+    distraction: ['#ff3355', '#ff5f78', '#ff8296', '#d92040'],
+    neutral: ['#00ff9d', '#36ffc0', '#7dffcf', '#00cc7d']
+  };
 
   function sumEntries(entries) {
     return entries.reduce((s, e) => s + (e.durationMs || 0), 0);
@@ -124,21 +129,22 @@
       }
     });
 
-    function toSlices(obj) {
+    function toSlices(obj, paletteName) {
+      const palette = PALETTES[paletteName] || PALETTES.neutral;
       return Object.entries(obj)
         .sort((a, b) => b[1] - a[1])
         .map(([label, value], i) => ({
           label,
           value,
-          color: PALETTE[i % PALETTE.length]
+          color: palette[i % palette.length]
         }));
     }
 
     return {
-      productive: toSlices(productive),
-      study: toSlices(study),
-      distraction: toSlices(distraction),
-      neutral: toSlices(neutral)
+      productive: toSlices(productive, 'productive'),
+      study: toSlices(study, 'study'),
+      distraction: toSlices(distraction, 'distraction'),
+      neutral: toSlices(neutral, 'neutral')
     };
   }
 

@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260529-mission-analysis">
+  <link rel="stylesheet" href="style.css?v=20260529-brand-mobile">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -21,10 +21,6 @@
 <body>
   <div class="scanlines" aria-hidden="true"></div>
   <div class="grid-bg" aria-hidden="true"></div>
-
-  <div class="creator-banner">
-    Created with <span class="heart">&#10084;</span> by <strong>Anshul Sati</strong>
-  </div>
 
   <!-- PWA install prompt (shown when browser allows install) -->
   <div class="install-banner hidden" id="installBanner">
@@ -42,8 +38,10 @@
   <header class="header">
     <div class="header-left">
       <span class="logo-icon">&#9672;</span>
-      <h1 class="logo">LIFE<span class="accent">OS</span></h1>
-      <span class="version">PWA</span>
+      <div class="brand-stack">
+        <h1 class="logo">LIFE<span class="accent">OS</span></h1>
+        <span class="brand-credit">Designed &amp; Developed by Anshul Sati</span>
+      </div>
     </div>
     <div class="header-center header-center-wrap">
       <span class="status-dot" id="statusDot"></span>
@@ -325,7 +323,7 @@
   </div>
 
   <footer class="command-bar">
-    <span class="footer-credit">Made with <span class="heart">&#10084;</span> by <strong>Anshul Sati</strong></span>
+    <span class="footer-credit">Designed &amp; Developed by <strong>Anshul Sati</strong></span>
     <span class="divider">|</span>
     <span>Keys switch tasks instantly</span>
   </footer>
@@ -334,6 +332,6 @@
   <div class="toast hidden" id="toast"></div>
 
   <script src="charts.js"></script>
-  <script src="script.js?v=20260529-mission-analysis"></script>
+  <script src="script.js?v=20260529-brand-mobile"></script>
 </body>
 </html>

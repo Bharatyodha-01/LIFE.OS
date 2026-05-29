@@ -32,14 +32,11 @@
   ];
 
   const TASK_STYLES = [
-    { bg: 'rgba(0,255,157,0.12)', border: '#00ff9d', color: '#00ff9d', font: 'Orbitron, sans-serif' },
-    { bg: 'rgba(0,180,255,0.12)', border: '#00b4ff', color: '#00b4ff', font: 'Share Tech Mono, monospace' },
-    { bg: 'rgba(255,170,0,0.12)', border: '#ffaa00', color: '#ffaa00', font: 'Orbitron, sans-serif' },
-    { bg: 'rgba(255,51,85,0.12)', border: '#ff3355', color: '#ff3355', font: 'Share Tech Mono, monospace' },
-    { bg: 'rgba(166,255,0,0.12)', border: '#a6ff00', color: '#a6ff00', font: 'Orbitron, sans-serif' },
-    { bg: 'rgba(180,120,255,0.12)', border: '#b478ff', color: '#b478ff', font: 'Share Tech Mono, monospace' },
-    { bg: 'rgba(0,255,200,0.12)', border: '#00ffc8', color: '#00ffc8', font: 'Orbitron, sans-serif' },
-    { bg: 'rgba(255,120,200,0.12)', border: '#ff78c8', color: '#ff78c8', font: 'Share Tech Mono, monospace' }
+    { category: 'productive', bg: 'rgba(30,123,255,0.12)', border: '#1e7bff', color: '#6fb0ff', font: 'Orbitron, sans-serif' },
+    { category: 'study', bg: 'rgba(30,123,255,0.12)', border: '#1e7bff', color: '#6fb0ff', font: 'Orbitron, sans-serif' },
+    { category: 'distraction', bg: 'rgba(255,51,85,0.12)', border: '#ff3355', color: '#ff6f88', font: 'Share Tech Mono, monospace' },
+    { category: 'neutral', bg: 'rgba(0,255,157,0.10)', border: '#00ff9d', color: '#00ff9d', font: 'Share Tech Mono, monospace' },
+    { category: 'rest', bg: 'rgba(0,255,157,0.10)', border: '#00ff9d', color: '#00ff9d', font: 'Share Tech Mono, monospace' }
   ];
 
   const DEFAULT_MAPPINGS = {
@@ -154,10 +151,8 @@
   }
 
   function getTaskStyle(mainName) {
-    let h = 0;
-    const s = mainName || '';
-    for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-    return TASK_STYLES[Math.abs(h) % TASK_STYLES.length];
+    const cat = getCategory(mainName);
+    return TASK_STYLES.find((style) => style.category === cat) || TASK_STYLES.find((style) => style.category === 'neutral');
   }
 
   function loadUsers() {
@@ -1351,9 +1346,10 @@
   }
 
   function missionMetricHTML([label, value, type], summary) {
+    const tone = metricToneClass(label);
     if (type === 'score') {
       const pct = Number(value) || 0;
-      return `<div class="mission-metric mission-score">
+      return `<div class="mission-metric mission-score ${tone}">
         <span>${label}</span>
         <strong>${pct}%</strong>
         <div class="mission-score-bar"><div style="width:${pct}%"></div></div>
@@ -1361,17 +1357,25 @@
     }
 
     if (type === 'longest') {
-      return `<div class="mission-metric mission-longest">
+      return `<div class="mission-metric mission-longest ${tone}">
         <span>${label}</span>
         <strong>${escapeHtml(value || '--')}</strong>
         <em>${formatDurationHuman(summary.longestMs)}</em>
       </div>`;
     }
 
-    return `<div class="mission-metric">
+    return `<div class="mission-metric ${tone}">
       <span>${label}</span>
       <strong>${escapeHtml(value)}</strong>
     </div>`;
+  }
+
+  function metricToneClass(label) {
+    const normalized = String(label).toLowerCase();
+    if (normalized.includes('productive') || normalized.includes('study')) return 'metric-productive';
+    if (normalized.includes('distraction')) return 'metric-distraction';
+    if (normalized.includes('neutral')) return 'metric-neutral';
+    return '';
   }
 
   function taskSummaryHTML(tasks) {
