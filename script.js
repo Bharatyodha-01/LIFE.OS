@@ -683,22 +683,18 @@
     localStorage.setItem(userPrefix() + 'mappings', JSON.stringify(state.mappings));
   }
 
-  /**
-   * Check if a key is already mapped in the same input context.
-   * Main-task keys live in the normal context. Subtask keys live only under
-   * their parent main task, so the same key can be reused elsewhere.
-   */
-  function getKeyConflict(key, parentKeyForSubAdd) {
+  /** Main-task keys only need to be unique among other main tasks. */
+  function getMainKeyConflict(key) {
     const k = key.toUpperCase();
+    return state.mappings.mainTasks[k] || null;
+  }
 
-    if (!parentKeyForSubAdd) {
-      if (state.mappings.mainTasks[k]) return state.mappings.mainTasks[k];
-      return null;
-    }
-
-    const ownSubs = state.mappings.subTasks[parentKeyForSubAdd];
+  /** Subtask keys only need to be unique among siblings under the same parent. */
+  function getSiblingSubtaskKeyConflict(parentKey, key) {
+    const k = key.toUpperCase();
+    const ownSubs = state.mappings.subTasks[parentKey];
     if (ownSubs && ownSubs[k]) {
-      return `${state.mappings.mainTasks[parentKeyForSubAdd] || parentKeyForSubAdd} > ${ownSubs[k]}`;
+      return `${state.mappings.mainTasks[parentKey] || parentKey} > ${ownSubs[k]}`;
     }
     return null;
   }
@@ -1586,7 +1582,7 @@
       if (!key || !name) { showToast('Enter key and name', 'error'); return; }
       if (key.length !== 1) { showToast('Key must be 1 character', 'error'); return; }
 
-      const conflict = getKeyConflict(key);
+      const conflict = getMainKeyConflict(key);
       if (conflict && state.mappings.mainTasks[key] !== name) {
         showToast(`Key "${key}" used by ${conflict}`, 'error');
         return;
@@ -1607,7 +1603,7 @@
 
       if (!parentKey || !key || !name) { showToast('Fill all fields', 'error'); return; }
 
-      const conflict = getKeyConflict(key, parentKey);
+      const conflict = getSiblingSubtaskKeyConflict(parentKey, key);
       if (conflict) { showToast(`Key "${key}" used by ${conflict}`, 'error'); return; }
 
       addSubMapping(parentKey, key, name);
