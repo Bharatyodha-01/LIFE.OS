@@ -27,7 +27,7 @@
   --font-mono: 'Share Tech Mono', monospace;
   --radius: 4px;
   --transition: 0.15s ease;
-  --readable-tracking: 0.035em;
+  --readable-tracking: 0.045em;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -628,7 +628,7 @@ body.pwa-standalone {
 
 .mission-metric strong {
   display: block;
-  margin-top: 3px;
+  margin-top: 5px;
   color: #fff;
   font-family: var(--font-display);
   font-size: 0.72rem;
@@ -668,7 +668,7 @@ body.pwa-standalone {
 
 .mission-longest em {
   display: block;
-  margin-top: 2px;
+  margin-top: 4px;
   color: #fff;
   font-family: var(--font-display);
   font-size: 0.72rem;
@@ -847,7 +847,7 @@ body.pwa-standalone {
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .stat-label {
@@ -889,7 +889,7 @@ body.pwa-standalone {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
 }
 
 .breakdown-bar {
