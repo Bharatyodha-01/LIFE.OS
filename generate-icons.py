@@ -11,15 +11,26 @@ SIZES = [72, 96, 128, 144, 152, 192, 384, 512]
 FAVICON_SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 
 
+def fit_on_transparent_canvas(image, size):
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    fitted = image.copy()
+    fitted.thumbnail((size, size), Image.Resampling.LANCZOS)
+    x = (size - fitted.width) // 2
+    y = (size - fitted.height) // 2
+    canvas.alpha_composite(fitted, (x, y))
+    return canvas
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     image = Image.open(SOURCE).convert("RGBA")
 
     for size in SIZES:
-        resized = image.resize((size, size), Image.Resampling.LANCZOS)
+        resized = fit_on_transparent_canvas(image, size)
         resized.save(OUT / f"icon-{size}.png", "PNG")
 
-    image.save(ROOT / "favicon.ico", sizes=FAVICON_SIZES)
+    favicon = fit_on_transparent_canvas(image, 256)
+    favicon.save(ROOT / "favicon.ico", sizes=FAVICON_SIZES)
     print(f"Generated LIFE_OS icons from {SOURCE}")
 
 

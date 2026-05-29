@@ -101,9 +101,42 @@ body.pwa-standalone {
 
 .brand-stack {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 7px;
+  max-height: 32px;
   min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1;
+  text-align: left;
+}
+
+.brand-name {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-shadow: var(--glow-green);
+}
+
+.brand-subtitle {
+  color: var(--text);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
 }
 
 .logo {
@@ -117,10 +150,11 @@ body.pwa-standalone {
 
 .brand-credit {
   color: #7ee7ff;
-  font-size: 0.68rem;
+  font-size: 0.48rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  line-height: 1.1;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .header-center {
@@ -1685,6 +1719,11 @@ body.pwa-standalone .command-bar {
     text-align: center;
   }
 
+  .brand-logo {
+    width: 24px;
+    height: 24px;
+  }
+
   .header-center {
     gap: 8px;
     justify-content: center;
@@ -1747,7 +1786,10 @@ body.pwa-standalone .command-bar {
 
 @media (max-width: 640px) {
   .logo { font-size: 1.25rem; }
-  .brand-credit { font-size: 0.66rem; }
+  .brand-logo { width: 22px; height: 22px; }
+  .brand-name { font-size: 0.78rem; }
+  .brand-subtitle { font-size: 0.5rem; }
+  .brand-credit { font-size: 0.46rem; }
 
   .command-bar {
     display: none;

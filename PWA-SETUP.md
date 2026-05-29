@@ -11,9 +11,9 @@ LIFE OS can be installed on **Android phones** and **desktop/laptop** like a nat
 | `manifest.json` | App name, icons, colors, standalone display |
 | `sw.js` | Service worker — offline cache |
 | `offline.html` | Shown if you open offline before first cache |
-| `icons/` | PNG icons (72–512px) for install |
-| `icon.svg` | Optional vector icon |
-| `generate-icons.py` | Regenerate PNG icons if needed |
+| `assets/life-os-logo.png` | Official LIFE_OS source logo |
+| `icons/` | PNG icons (72–512px) generated from the official logo |
+| `generate-icons.py` | Regenerate PNG icons and favicon from the official logo |
 
 ### Where to place icons
 
@@ -38,7 +38,7 @@ cd life-os
 python generate-icons.py
 ```
 
-`manifest.json` already points to `./icons/icon-*.png`.
+`manifest.json` already points to `./icons/icon-*.png`, all generated from `assets/life-os-logo.png`.
 
 ---
 

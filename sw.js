@@ -2,7 +2,7 @@
  * LIFE OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v9-official-logo';
+const CACHE_NAME = 'lifeos-pwa-v12-locked-brand';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -10,6 +10,8 @@ const PRECACHE = [
   './',
   './index.html',
   './style.css',
+  './style.css?v=20260529-locked-brand',
+  './style.css?v=20260529-compact-brand',
   './style.css?v=20260529-official-logo',
   './script.js',
   './script.js?v=20260529-key-context',
