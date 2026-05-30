@@ -85,7 +85,8 @@
     selectedSubKeys: new Set(),
     activeUserId: 'user1',
     users: [],
-    chartRange: 'day',
+    chartRange: 'today',
+    chartType: 'bar',
     timelineRange: 'today',
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
@@ -366,6 +367,7 @@
     renderTimeline();
     renderRecent();
     renderAnalytics();
+    renderChartsIfOpen();
     updateTodaySummary();
     updateSystemStatus();
     renderUserSelect();
@@ -373,29 +375,8 @@
   }
 
   function getEntriesForRange(range) {
-    const entries = [];
-    const days = range === 'week' ? 7 : 1;
-    for (let i = 0; i < days; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = userPrefix() + 'day_' + dateKey(d);
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        try {
-          const data = JSON.parse(raw);
-          (data.timeline || []).forEach((e) => entries.push(e));
-        } catch (e) { /* skip */ }
-      }
-    }
-    if (state.currentTask) {
-      entries.push({
-        main: state.currentTask.main,
-        sub: state.currentTask.sub,
-        category: getCategory(state.currentTask.main),
-        durationMs: Date.now() - state.currentTask.startTime
-      });
-    }
-    return entries;
+    const normalizedRange = range === 'day' ? 'today' : range;
+    return getTimelineRangeModel(normalizedRange).entries;
   }
 
   function renderChartsDashboard() {
@@ -408,12 +389,21 @@
     }
 
     try {
-      const entries = getEntriesForRange(state.chartRange);
-      LifeOSCharts.renderChartsPanel(container, entries, getCategory);
+      const range = state.chartRange === 'day' ? 'today' : state.chartRange;
+      const entries = getEntriesForRange(range);
+      LifeOSCharts.renderChartsPanel(container, entries, getCategory, {
+        chartType: state.chartType,
+        range
+      });
     } catch (err) {
       console.error('Chart render error:', err);
       container.innerHTML = '<p class="chart-error">Could not draw charts. See console for details.</p>';
     }
+  }
+
+  function renderChartsIfOpen() {
+    const modal = document.getElementById('chartsModal');
+    if (modal && !modal.classList.contains('hidden')) renderChartsDashboard();
   }
 
   /** Open charts modal (mobile-safe) and render after visible */
@@ -826,6 +816,7 @@
     renderTimeline();
     renderRecent();
     renderAnalytics();
+    renderChartsIfOpen();
     updateTodaySummary();
     updateSystemStatus();
   }
@@ -872,6 +863,7 @@
       saveTodayData(dayData);
       renderRecent();
       renderAnalytics();
+      renderChartsIfOpen();
     }
 
     saveCurrentActiveTask();
@@ -881,6 +873,7 @@
     updateLivePanel();
     renderActiveCommands();
     renderTimeline();
+    renderChartsIfOpen();
     updateTodaySummary();
     updateSystemStatus();
     markActivity();
@@ -1294,7 +1287,10 @@
     }
 
     state.analyticsTick += 1;
-    if (state.analyticsTick % 5 === 0) renderAnalytics();
+    if (state.analyticsTick % 5 === 0) {
+      renderAnalytics();
+      renderChartsIfOpen();
+    }
   }
 
   function renderTimeline() {
@@ -2180,7 +2176,7 @@
         e.preventDefault();
         document.querySelectorAll('.chart-range-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        state.chartRange = btn.dataset.range || 'day';
+        state.chartRange = btn.dataset.range || 'today';
         renderChartsDashboard();
       };
       btn.addEventListener('click', setRange);
@@ -2311,6 +2307,18 @@
     window.addEventListener('beforeunload', () => {
       saveCurrentActiveTask();
       console.log('[LIFE-OS] beforeunload: active task saved');
+    });
+
+    document.querySelectorAll('.chart-type-btn').forEach((btn) => {
+      const setChartType = (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.chart-type-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.chartType = btn.dataset.chartType || 'bar';
+        renderChartsDashboard();
+      };
+      btn.addEventListener('click', setChartType);
+      btn.addEventListener('touchend', setChartType, { passive: false });
     });
     window.addEventListener('pagehide', saveCurrentActiveTask);
     document.addEventListener('visibilitychange', () => {
