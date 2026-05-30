@@ -22,7 +22,6 @@
 
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
-    idleMinutes: 5,
     soundEnabled: true,
     timelineNewestFirst: true,
     showKeyOverlay: false,
@@ -81,7 +80,6 @@
     prefs: { ...DEFAULT_PREFS },
     timelinePanels: { mission: true, taskSummary: false },
     lastActivity: Date.now(),
-    idleAlertShown: false,
     analyticsTick: 0,
     selectedMainKeys: new Set(),
     selectedSubKeys: new Set(),
@@ -465,7 +463,7 @@
   function setupMobileKeyboard() {
     const input = document.getElementById('mobileKeyInput');
     const bar = document.getElementById('mobileKeyBar');
-    const btn = document.getElementById('btnFocusKeys');
+    const btn = document.getElementById('btnMobileKeys');
     if (!input || !bar) return;
 
     if (isMobileDevice()) {
@@ -502,11 +500,6 @@
     return state.prefs.subtaskWaitMs || DEFAULT_PREFS.subtaskWaitMs;
   }
 
-  function getIdleThresholdMs() {
-    const min = state.prefs.idleMinutes || DEFAULT_PREFS.idleMinutes;
-    return min * 60 * 1000;
-  }
-
   function loadPreferences() {
     const raw = localStorage.getItem(userPrefix() + 'prefs');
     if (raw) {
@@ -524,21 +517,20 @@
 
   function savePreferences() {
     state.prefs.subtaskWaitMs = parseInt(document.getElementById('prefSubtaskWait').value, 10);
-    state.prefs.idleMinutes = parseInt(document.getElementById('prefIdleMinutes').value, 10);
     state.prefs.soundEnabled = document.getElementById('prefSound').checked;
     state.prefs.timelineNewestFirst = document.getElementById('prefTimelineNewest').checked;
     state.prefs.clockFormat = document.getElementById('prefClockFormat').value;
     state.soundEnabled = state.prefs.soundEnabled;
     localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
     applyPreferencesToUI();
+    refreshAllUI();
+    tickTimer();
     showToast('Preferences saved');
   }
 
   function applyPreferencesToUI() {
     const waitSel = document.getElementById('prefSubtaskWait');
-    const idleSel = document.getElementById('prefIdleMinutes');
     if (waitSel) waitSel.value = String(state.prefs.subtaskWaitMs);
-    if (idleSel) idleSel.value = String(state.prefs.idleMinutes);
     const soundCb = document.getElementById('prefSound');
     const newestCb = document.getElementById('prefTimelineNewest');
     if (soundCb) soundCb.checked = state.prefs.soundEnabled;
@@ -1023,10 +1015,6 @@
 
   function markActivity() {
     state.lastActivity = Date.now();
-    if (state.idleAlertShown) {
-      state.idleAlertShown = false;
-      document.getElementById('idleAlert').classList.add('hidden');
-    }
     if (state.currentTask && !getAwaitingSubtaskContext()) {
       document.getElementById('statusDot').className = 'status-dot';
     }
@@ -1154,8 +1142,8 @@
       category: entry.category || getCategory(entry.main),
       start,
       end,
-      startFormatted: entry.startFormatted || formatTime(new Date(start)),
-      endFormatted: isActive ? 'NOW' : (entry.endFormatted || formatTime(new Date(end))),
+      startFormatted: formatTime(new Date(start)),
+      endFormatted: isActive ? 'NOW' : formatTime(new Date(end)),
       durationMs: entry.durationMs || Math.max(0, end - start),
       isActive
     };
@@ -1303,15 +1291,6 @@
       const elapsed = Date.now() - state.currentTask.startTime;
       document.getElementById('liveTimer').textContent = formatDurationMs(elapsed);
       document.getElementById('taskDuration').textContent = formatDurationHuman(elapsed);
-    }
-
-    // Idle detection
-    const idleMs = Date.now() - state.lastActivity;
-    if (state.currentTask && idleMs > getIdleThresholdMs() && !state.idleAlertShown) {
-      state.idleAlertShown = true;
-      document.getElementById('idleDuration').textContent = Math.floor(idleMs / 60000);
-      document.getElementById('idleAlert').classList.remove('hidden');
-      document.getElementById('statusDot').className = 'status-dot idle-warn';
     }
 
     state.analyticsTick += 1;
@@ -1904,7 +1883,13 @@
     const entries = getTodayData().timeline || [];
     const rows = [['Start', 'End', 'Main', 'Sub', 'Duration']];
     entries.forEach(e => {
-      rows.push([e.startFormatted, e.endFormatted, e.main, e.sub || '', formatDurationHuman(e.durationMs)]);
+      rows.push([
+        formatTime(new Date(e.start)),
+        formatTime(new Date(e.end)),
+        e.main,
+        e.sub || '',
+        formatDurationHuman(e.durationMs)
+      ]);
     });
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\\n');
     downloadFile(`lifeos-timeline-${dateKey()}.csv`, csv, 'text/csv');

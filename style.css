@@ -238,8 +238,6 @@ body.pwa-standalone {
 }
 
 .status-dot.waiting { background: var(--amber); box-shadow: 0 0 15px #ffaa0066; }
-.status-dot.idle-warn { background: var(--red); box-shadow: 0 0 15px #ff335566; }
-
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -315,28 +313,6 @@ body.pwa-standalone {
 }
 
 .countdown { font-weight: bold; color: #fff; }
-
-.idle-alert {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  padding: 8px 20px;
-  background: #ff335522;
-  border: 1px solid var(--red);
-  color: var(--red);
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  border-radius: var(--radius);
-  animation: shake 0.5s ease;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(-50%); }
-  25% { transform: translateX(calc(-50% - 4px)); }
-  75% { transform: translateX(calc(-50% + 4px)); }
-}
 
 .hidden { display: none !important; }
 
@@ -484,8 +460,8 @@ body.pwa-standalone {
 .timeline-range-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 10px 10px 0;
+  gap: 8px;
+  padding: 12px 12px 0;
 }
 
 .timeline-range-btn {
@@ -493,12 +469,13 @@ body.pwa-standalone {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-panel-alt);
-  color: var(--text-dim);
+  color: #fff;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  padding: 6px 4px;
+  min-height: 42px;
+  padding: 12px 8px;
   cursor: pointer;
   transition: var(--transition);
 }
@@ -512,7 +489,7 @@ body.pwa-standalone {
 }
 
 .timeline-summary {
-  padding: 10px;
+  padding: 12px;
   flex-shrink: 0;
 }
 
@@ -535,16 +512,16 @@ body.pwa-standalone {
   justify-content: space-between;
   appearance: none;
   width: 100%;
-  min-height: 42px;
-  gap: 12px;
-  padding: 11px 13px;
+  min-height: 54px;
+  gap: 14px;
+  padding: 14px 16px;
   border: 0;
   border-bottom: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   cursor: pointer;
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 1.08rem;
   letter-spacing: 0.15em;
   text-align: left;
   text-transform: uppercase;
@@ -573,7 +550,7 @@ body.pwa-standalone {
 .timeline-section-label {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -581,7 +558,7 @@ body.pwa-standalone {
   display: inline-block;
   min-width: 1.1em;
   color: var(--accent);
-  font-size: 0.95rem;
+  font-size: 1.24rem;
   line-height: 1;
 }
 
@@ -607,28 +584,28 @@ body.pwa-standalone {
 .mission-analysis-title strong {
   color: var(--accent);
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 1rem;
   letter-spacing: 0.12em;
 }
 
 .mission-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
+  gap: 2px;
   background: var(--border);
 }
 
 .mission-metric {
   min-width: 0;
-  padding: 8px;
+  padding: 13px 12px;
   background: #0c1218;
 }
 
 .mission-metric span {
   display: block;
-  color: var(--text-dim);
-  font-size: 0.55rem;
-  letter-spacing: 0.08em;
+  color: #fff;
+  font-size: 0.82rem;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -637,10 +614,10 @@ body.pwa-standalone {
 
 .mission-metric strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 8px;
   color: #fff;
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 1.08rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
@@ -677,10 +654,10 @@ body.pwa-standalone {
 
 .mission-longest em {
   display: block;
-  margin-top: 4px;
+  margin-top: 6px;
   color: #fff;
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-style: normal;
 }
 
@@ -690,8 +667,8 @@ body.pwa-standalone {
 }
 
 .mission-score-bar {
-  height: 5px;
-  margin-top: 6px;
+  height: 7px;
+  margin-top: 10px;
   background: var(--bg-deep);
   border-radius: 2px;
   overflow: hidden;
@@ -715,26 +692,27 @@ body.pwa-standalone {
 .task-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 0 10px 10px;
+  gap: 9px;
+  padding: 0 12px 12px;
 }
 
 .task-summary-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
+  gap: 11px;
   min-width: 0;
-  padding: 5px 7px;
+  min-height: 40px;
+  padding: 9px 10px;
   border: 1px solid #1a2a3a;
   border-radius: 3px;
   background: #0c1218;
-  font-size: 0.66rem;
+  font-size: 0.99rem;
 }
 
 .task-summary-row .task-rank {
-  color: var(--text-dim);
-  font-size: 0.56rem;
+  color: #fff;
+  font-size: 0.84rem;
 }
 
 .task-summary-row strong {
@@ -748,19 +726,20 @@ body.pwa-standalone {
 
 .task-summary-row > span:last-child {
   color: var(--accent);
+  font-size: 0.96rem;
   font-variant-numeric: tabular-nums;
 }
 
 .task-summary-empty {
   grid-column: 1 / -1;
-  color: var(--text-dim);
-  font-size: 0.66rem;
+  color: #fff;
+  font-size: 0.99rem;
 }
 
 .timeline-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px;
   scrollbar-color: var(--accent) #071018;
   scrollbar-width: auto;
   scroll-behavior: smooth;
@@ -796,17 +775,19 @@ body.pwa-standalone {
 .timeline-empty, .recent-empty, .breakdown-empty {
   padding: 30px;
   text-align: center;
-  color: var(--text-dim);
-  font-size: 0.8rem;
+  color: #fff;
+  font-size: 1rem;
 }
 
 .timeline-entry {
   display: grid;
-  grid-template-columns: 100px 1fr 80px;
-  gap: 10px;
-  padding: 10px 12px;
-  border-left: 2px solid var(--border);
-  margin-bottom: 4px;
+  grid-template-columns: minmax(150px, 0.95fr) minmax(0, 1.6fr) minmax(100px, 0.65fr);
+  align-items: center;
+  gap: 18px;
+  min-height: 68px;
+  padding: 18px;
+  border-left: 3px solid var(--border);
+  margin-bottom: 9px;
   background: var(--bg-panel-alt);
   border-radius: 0 var(--radius) var(--radius) 0;
   animation: slide-in 0.25s ease;
@@ -829,23 +810,25 @@ body.pwa-standalone {
 }
 
 .timeline-time {
-  font-size: 0.75rem;
-  color: var(--blue);
+  font-size: 1.08rem;
+  color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
 .timeline-task {
-  font-size: 0.85rem;
+  font-size: 1.18rem;
+  line-height: 1.35;
 }
 
 .timeline-task .main { color: var(--accent); }
-.timeline-task .sub { color: var(--blue); }
-.timeline-task .sub::before { content: ' > '; color: var(--text-dim); }
+.timeline-task .sub { color: #fff; }
+.timeline-task .sub::before { content: ' > '; color: #fff; }
 
 .timeline-duration {
   text-align: right;
-  font-size: 0.8rem;
-  color: var(--text-dim);
+  font-size: 1.12rem;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Analytics */
@@ -1370,8 +1353,8 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 14px 16px;
   background: #0f1419;
   border-bottom: 1px solid var(--border);
 }
@@ -1379,7 +1362,7 @@ input:focus, select:focus {
 .timeline-day-header h3 {
   color: var(--accent);
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 0.98rem;
   letter-spacing: 0.12em;
 }
 
@@ -1387,9 +1370,9 @@ input:focus, select:focus {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
-  color: var(--text-dim);
-  font-size: 0.65rem;
+  gap: 12px;
+  color: #fff;
+  font-size: 0.9rem;
 }
 
 .timeline-day-stats strong {
@@ -1397,7 +1380,7 @@ input:focus, select:focus {
 }
 
 .timeline-day-entries {
-  padding: 8px;
+  padding: 12px;
 }
 
 .timeline-day-entries .timeline-entry:last-child {
@@ -1881,7 +1864,7 @@ body.pwa-standalone .header {
   .task-summary-grid { grid-template-columns: 1fr; }
   .timeline-entry {
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 8px;
   }
   .timeline-duration { text-align: left; }
   .timeline-day-header {
@@ -1960,21 +1943,22 @@ body.pwa-standalone .header {
   }
 
   .timeline-range-tabs {
-    gap: 6px;
-    padding: 8px 8px 0;
+    gap: 7px;
+    padding: 10px 8px 0;
   }
 
   .timeline-range-btn {
     min-width: 0;
-    padding: 7px 4px;
-    font-size: 0.58rem;
+    min-height: 40px;
+    padding: 10px 5px;
+    font-size: 0.74rem;
     letter-spacing: 0.04em;
   }
 
   .timeline-summary,
   .timeline-list,
   .timeline-day-entries {
-    padding: 8px;
+    padding: 10px;
   }
 
   .mission-metrics {
@@ -2092,8 +2076,7 @@ body.pwa-standalone .header {
     width: 100%;
   }
 
-  .toast,
-  .idle-alert {
+  .toast {
     left: 8px;
     right: 8px;
     transform: none;
