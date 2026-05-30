@@ -6,33 +6,54 @@
 
   const COLORS = {
     productive: '#1e7bff',
-    study: '#1e7bff',
     neutral: '#00ff9d',
     distraction: '#ff3355',
-    rest: '#00ff9d'
+    muted: '#1a2a3a',
+    text: '#ffffff'
   };
 
-  const CATEGORY_LABELS = {
-    productive: 'Productive + Study',
-    neutral: 'Neutral',
-    distraction: 'Distraction'
-  };
+  const PALETTE = ['#1e7bff', '#00ff9d', '#ff3355', '#00b4ff', '#ffaa00', '#6fb0ff', '#36ffc0', '#ff7aa2', '#b8ff7a', '#9f8cff'];
 
   function duration(entry) {
     return Math.max(0, Number(entry.durationMs) || 0);
   }
 
-  function sumEntries(entries) {
-    return entries.reduce((s, e) => s + duration(e), 0);
+  function formatMs(ms) {
+    const totalMinutes = Math.floor(ms / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) return hours + 'h ' + minutes + 'm';
+    if (totalMinutes > 0) return totalMinutes + 'm';
+    return Math.floor(ms / 1000) + 's';
   }
 
-  function formatMs(ms) {
-    const m = Math.floor(ms / 60000);
-    const h = Math.floor(m / 60);
-    const rm = m % 60;
-    if (h > 0) return h + 'h ' + rm + 'm';
-    if (m > 0) return m + 'm';
-    return Math.floor(ms / 1000) + 's';
+  function categoryKey(entry, getCategory) {
+    const cat = entry.category || getCategory(entry.main);
+    if (cat === 'distraction') return 'distraction';
+    if (cat === 'productive' || cat === 'study') return 'productive';
+    return 'neutral';
+  }
+
+  function detailLabel(entry) {
+    return entry.sub ? `${entry.main} > ${entry.sub}` : entry.main;
+  }
+
+  function subtaskLabel(entry) {
+    return entry.sub || entry.main || '--';
+  }
+
+  function sum(values) {
+    return values.reduce((total, item) => total + item.value, 0);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    })[ch]);
   }
 
   function setupCanvas(canvas, width, height) {
@@ -48,77 +69,123 @@
     return ctx;
   }
 
-  function categoryTotals(entries, getCategory) {
-    const totals = { productive: 0, neutral: 0, distraction: 0 };
+  function addToMap(map, key, value, meta = {}) {
+    if (!key) return;
+    if (!map.has(key)) map.set(key, { label: key, value: 0, ...meta });
+    map.get(key).value += value;
+  }
+
+  function toSlices(map, palette = PALETTE) {
+    return [...map.values()]
+      .sort((a, b) => b.value - a.value)
+      .map((item, index) => ({
+        ...item,
+        color: item.color || palette[index % palette.length]
+      }));
+  }
+
+  function buildBreakdowns(entries, getCategory) {
+    const categories = new Map([
+      ['productive', { label: 'Productive', value: 0, color: COLORS.productive }],
+      ['neutral', { label: 'Neutral', value: 0, color: COLORS.neutral }],
+      ['distraction', { label: 'Distraction', value: 0, color: COLORS.distraction }]
+    ]);
+    const detail = new Map();
+    const productive = new Map();
+    const neutral = new Map();
+    const distraction = new Map();
+    const subtasks = new Map();
+
     entries.forEach((entry) => {
-      const cat = entry.category || getCategory(entry.main);
       const d = duration(entry);
-      if (cat === 'distraction') totals.distraction += d;
-      else if (cat === 'productive' || cat === 'study') totals.productive += d;
-      else totals.neutral += d;
+      if (!d) return;
+      const cat = categoryKey(entry, getCategory);
+      categories.get(cat).value += d;
+
+      addToMap(detail, detailLabel(entry), d, { category: cat, color: COLORS[cat] });
+      if (cat === 'productive') addToMap(productive, detailLabel(entry), d, { color: COLORS.productive });
+      if (cat === 'neutral') addToMap(neutral, detailLabel(entry), d, { color: COLORS.neutral });
+      if (cat === 'distraction') addToMap(distraction, detailLabel(entry), d, { color: COLORS.distraction });
+      if (entry.sub) addToMap(subtasks, subtaskLabel(entry), d, { color: COLORS[cat] });
     });
-    return totals;
+
+    return {
+      categories: toSlices(categories),
+      detail: toSlices(detail),
+      productive: toSlices(productive, ['#1e7bff', '#4c9bff', '#6fb0ff', '#00b4ff']),
+      neutral: toSlices(neutral, ['#00ff9d', '#36ffc0', '#7dffcf', '#00cc7d']),
+      distraction: toSlices(distraction, ['#ff3355', '#ff5f78', '#ff8296', '#d92040']),
+      subtasks: toSlices(subtasks)
+    };
   }
 
-  function categorySlices(entries, getCategory) {
-    const totals = categoryTotals(entries, getCategory);
-    return Object.entries(totals).map(([key, value]) => ({
-      key,
-      label: CATEGORY_LABELS[key] || key,
-      value,
-      color: COLORS[key] || COLORS.neutral
-    }));
+  function rangeDateKeys(model, range) {
+    const days = (model && model.days ? model.days : []).map((day) => day.key).filter(Boolean);
+    if (days.length) return [...days].sort();
+    const keys = [...new Set((model && model.entries ? model.entries : []).map((entry) => entry.dayKey).filter(Boolean))].sort();
+    return keys.length ? keys : [new Date().toISOString().slice(0, 10)];
   }
 
-  function taskSlices(entries) {
-    const totals = {};
-    entries.forEach((entry) => {
-      const label = entry.sub ? `${entry.main} > ${entry.sub}` : entry.main;
-      totals[label] = (totals[label] || 0) + duration(entry);
-    });
-    const palette = ['#00ff9d', '#1e7bff', '#ff3355', '#00b4ff', '#ffaa00', '#6fb0ff', '#36ffc0'];
-    return Object.entries(totals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([label, value], i) => ({ label, value, color: palette[i % palette.length] }));
-  }
+  function makeLineBuckets(model, range) {
+    const entries = model && model.entries ? model.entries : [];
+    const dayKeys = rangeDateKeys(model, range);
+    const hourly = range === 'today' || range === 'yesterday';
+    const buckets = [];
 
-  function lineSeries(entries, getCategory) {
-    const byBucket = new Map();
-    entries.forEach((entry, index) => {
-      const start = Number(entry.start || entry.startTime || 0);
-      const date = start ? new Date(start) : null;
-      const bucket = entry.dayKey || (date ? date.toISOString().slice(0, 10) : 'Session ' + (index + 1));
-      if (!byBucket.has(bucket)) {
-        byBucket.set(bucket, { label: formatBucket(bucket), productive: 0, neutral: 0, distraction: 0 });
+    if (hourly) {
+      const dayKey = dayKeys[dayKeys.length - 1] || new Date().toISOString().slice(0, 10);
+      for (let hour = 0; hour < 24; hour += 1) {
+        const start = new Date(`${dayKey}T${String(hour).padStart(2, '0')}:00:00`).getTime();
+        buckets.push({
+          key: `${dayKey}-${hour}`,
+          label: String(hour).padStart(2, '0') + ':00',
+          start,
+          end: start + 60 * 60 * 1000,
+          productive: 0,
+          neutral: 0,
+          distraction: 0
+        });
       }
-      const cat = entry.category || getCategory(entry.main);
-      const d = duration(entry);
-      if (cat === 'distraction') byBucket.get(bucket).distraction += d;
-      else if (cat === 'neutral' || cat === 'rest') byBucket.get(bucket).neutral += d;
-      else byBucket.get(bucket).productive += d;
-    });
-    return [...byBucket.values()];
-  }
-
-  function formatBucket(bucket) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(bucket)) {
-      const date = new Date(bucket + 'T12:00:00');
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      dayKeys.forEach((dayKey) => {
+        const start = new Date(`${dayKey}T00:00:00`).getTime();
+        const date = new Date(`${dayKey}T12:00:00`);
+        buckets.push({
+          key: dayKey,
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          start,
+          end: start + 24 * 60 * 60 * 1000,
+          productive: 0,
+          neutral: 0,
+          distraction: 0
+        });
+      });
     }
-    return bucket;
+
+    entries.forEach((entry) => {
+      const entryStart = Number(entry.start || entry.startTime || 0);
+      const entryEnd = Number(entry.end || (entryStart + duration(entry)));
+      if (!entryStart || !entryEnd || entryEnd <= entryStart) return;
+      const cat = categoryKey(entry, () => entry.category || 'neutral');
+      buckets.forEach((bucket) => {
+        const overlap = Math.max(0, Math.min(entryEnd, bucket.end) - Math.max(entryStart, bucket.start));
+        if (overlap > 0) bucket[cat] += overlap;
+      });
+    });
+
+    return buckets;
   }
 
   function drawEmpty(ctx, width, height) {
-    ctx.fillStyle = '#5a6a7a';
+    ctx.fillStyle = '#ffffff';
     ctx.font = '13px Share Tech Mono, monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No data yet', width / 2, height / 2);
   }
 
   function drawBar(canvas, slices, title) {
-    const width = 520;
-    const height = 260;
+    const width = 560;
+    const height = 300;
     const ctx = setupCanvas(canvas, width, height);
     if (!ctx) return;
 
@@ -127,55 +194,55 @@
     ctx.textAlign = 'left';
     ctx.fillText(title, 18, 24);
 
-    const active = slices.filter((s) => s.value > 0);
+    const active = slices.filter((slice) => slice.value > 0).slice(0, 10);
     if (!active.length) return drawEmpty(ctx, width, height);
 
-    const max = Math.max(...active.map((s) => s.value));
-    const barX = 150;
-    const barMax = width - barX - 80;
-    const rowH = Math.min(34, Math.floor((height - 52) / active.length));
+    const max = Math.max(...active.map((slice) => slice.value));
+    const barX = 178;
+    const barMax = width - barX - 88;
+    const rowH = Math.min(25, Math.floor((height - 58) / active.length));
 
     active.forEach((slice, index) => {
       const y = 48 + index * rowH;
-      const w = Math.max(3, (slice.value / max) * barMax);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '12px Share Tech Mono, monospace';
+      const widthValue = Math.max(3, (slice.value / max) * barMax);
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '11px Share Tech Mono, monospace';
       ctx.textAlign = 'right';
-      ctx.fillText(slice.label.slice(0, 18), barX - 14, y + 14);
+      ctx.fillText(slice.label.slice(0, 24), barX - 12, y + 13);
       ctx.fillStyle = '#071018';
-      ctx.fillRect(barX, y, barMax, 16);
+      ctx.fillRect(barX, y, barMax, 14);
       ctx.fillStyle = slice.color;
-      ctx.fillRect(barX, y, w, 16);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(barX, y, widthValue, 14);
+      ctx.fillStyle = COLORS.text;
       ctx.textAlign = 'left';
-      ctx.fillText(formatMs(slice.value), barX + barMax + 12, y + 13);
+      ctx.fillText(formatMs(slice.value), barX + barMax + 10, y + 12);
     });
   }
 
   function drawPie(canvas, slices, title) {
-    const size = 260;
+    const size = 270;
     const ctx = setupCanvas(canvas, size, size);
     if (!ctx) return;
 
-    const total = slices.reduce((s, x) => s + x.value, 0);
+    const active = slices.filter((slice) => slice.value > 0);
+    const total = sum(active);
     const cx = size / 2;
-    const cy = size / 2 + 6;
-    const r = size * 0.34;
+    const cy = size / 2 + 8;
+    const radius = size * 0.34;
 
     ctx.fillStyle = '#c8d6e5';
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(title, cx, 20);
 
-    if (total <= 0) return drawEmpty(ctx, size, size);
+    if (!active.length) return drawEmpty(ctx, size, size);
 
     let start = -Math.PI / 2;
-    slices.forEach((slice) => {
-      if (slice.value <= 0) return;
+    active.forEach((slice) => {
       const angle = (slice.value / total) * Math.PI * 2;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, start + angle);
+      ctx.arc(cx, cy, radius, start, start + angle);
       ctx.closePath();
       ctx.fillStyle = slice.color;
       ctx.fill();
@@ -186,182 +253,178 @@
     });
 
     ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = '#0a0e14';
     ctx.fill();
 
-    const top = slices.filter((s) => s.value > 0).sort((a, b) => b.value - a.value)[0];
-    if (top) {
-      const pct = Math.round((top.value / total) * 100);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 17px Orbitron, sans-serif';
-      ctx.fillText(pct + '%', cx, cy + 4);
-      ctx.fillStyle = top.color;
-      ctx.font = '10px Share Tech Mono, monospace';
-      ctx.fillText(top.label.slice(0, 18), cx, cy + 22);
-    }
+    const top = active[0];
+    const pct = Math.round((top.value / total) * 100);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 17px Orbitron, sans-serif';
+    ctx.fillText(pct + '%', cx, cy + 4);
+    ctx.fillStyle = top.color;
+    ctx.font = '10px Share Tech Mono, monospace';
+    ctx.fillText(top.label.slice(0, 18), cx, cy + 22);
   }
 
   function drawLine(canvas, points, title) {
-    const width = 560;
-    const height = 280;
+    const width = 620;
+    const height = 300;
     const ctx = setupCanvas(canvas, width, height);
     if (!ctx) return;
-
-    ctx.fillStyle = '#c8d6e5';
-    ctx.font = '700 12px Orbitron, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(title, 18, 24);
-
-    if (!points.length) return drawEmpty(ctx, width, height);
 
     const series = [
       { key: 'productive', label: 'Productive', color: COLORS.productive },
       { key: 'neutral', label: 'Neutral', color: COLORS.neutral },
       { key: 'distraction', label: 'Distraction', color: COLORS.distraction }
     ];
+    const max = Math.max(1, ...points.flatMap((point) => series.map((item) => point[item.key] || 0)));
+    const left = 54;
+    const right = 22;
+    const top = 48;
+    const bottom = 54;
+    const chartWidth = width - left - right;
+    const chartHeight = height - top - bottom;
 
-    const left = 52;
-    const right = 20;
-    const top = 46;
-    const bottom = 48;
-    const chartW = width - left - right;
-    const chartH = height - top - bottom;
-    const max = Math.max(1, ...points.flatMap((p) => series.map((s) => p[s.key] || 0)));
+    ctx.fillStyle = '#c8d6e5';
+    ctx.font = '700 12px Orbitron, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(title, 18, 24);
 
-    ctx.strokeStyle = '#1a2a3a';
+    ctx.strokeStyle = COLORS.muted;
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i += 1) {
-      const y = top + (chartH / 4) * i;
+      const y = top + (chartHeight / 4) * i;
       ctx.beginPath();
       ctx.moveTo(left, y);
       ctx.lineTo(width - right, y);
       ctx.stroke();
     }
 
-    series.forEach((s) => {
-      ctx.strokeStyle = s.color;
+    series.forEach((item) => {
+      ctx.strokeStyle = item.color;
       ctx.lineWidth = 3;
       ctx.beginPath();
       points.forEach((point, index) => {
-        const x = left + (points.length === 1 ? chartW / 2 : (chartW / (points.length - 1)) * index);
-        const y = top + chartH - ((point[s.key] || 0) / max) * chartH;
+        const x = left + (points.length <= 1 ? chartWidth / 2 : (chartWidth / (points.length - 1)) * index);
+        const y = top + chartHeight - ((point[item.key] || 0) / max) * chartHeight;
         if (index === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
+      points.forEach((point, index) => {
+        const x = left + (points.length <= 1 ? chartWidth / 2 : (chartWidth / (points.length - 1)) * index);
+        const y = top + chartHeight - ((point[item.key] || 0) / max) * chartHeight;
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = item.color;
+        ctx.fill();
+      });
     });
 
+    const labelEvery = Math.max(1, Math.ceil(points.length / 8));
     points.forEach((point, index) => {
-      const x = left + (points.length === 1 ? chartW / 2 : (chartW / (points.length - 1)) * index);
-      ctx.fillStyle = '#ffffff';
+      if (index % labelEvery !== 0 && index !== points.length - 1) return;
+      const x = left + (points.length <= 1 ? chartWidth / 2 : (chartWidth / (points.length - 1)) * index);
+      ctx.fillStyle = COLORS.text;
       ctx.font = '10px Share Tech Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(point.label, x, height - 18);
+      ctx.fillText(point.label, x, height - 20);
     });
   }
 
-  function legendHTML(slices, total) {
-    if (!total) return '<p class="chart-legend-empty">Log tasks to see percentages</p>';
-    return slices
-      .filter((s) => s.value > 0)
-      .sort((a, b) => b.value - a.value)
-      .map((s) => {
-        const pct = Math.round((s.value / total) * 100);
-        return `<div class="chart-legend-item">
-          <span class="chart-dot" style="background:${s.color}"></span>
-          <span class="chart-legend-label">${escapeHtml(s.label)}</span>
-          <span class="chart-pct">${formatMs(s.value)} · ${pct}%</span>
-        </div>`;
-      })
-      .join('');
+  function listHTML(items, total) {
+    if (!items.length || total <= 0) return '<p class="chart-legend-empty">No data in this range</p>';
+    return items.map((item) => {
+      const pct = Math.round((item.value / total) * 100);
+      return `<div class="chart-detail-row">
+        <div class="chart-detail-top">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${formatMs(item.value)} / ${pct}%</strong>
+        </div>
+        <div class="chart-contribution"><div style="width:${pct}%;background:${item.color}"></div></div>
+      </div>`;
+    }).join('');
   }
 
-  function lineLegendHTML(points) {
-    const totals = points.reduce((acc, point) => {
-      acc.productive += point.productive || 0;
-      acc.neutral += point.neutral || 0;
-      acc.distraction += point.distraction || 0;
-      return acc;
-    }, { productive: 0, neutral: 0, distraction: 0 });
-    const total = totals.productive + totals.neutral + totals.distraction;
-    return legendHTML([
-      { label: 'Productive + Study', value: totals.productive, color: COLORS.productive },
-      { label: 'Neutral + Rest', value: totals.neutral, color: COLORS.neutral },
-      { label: 'Distraction', value: totals.distraction, color: COLORS.distraction }
-    ], total);
+  function metricHTML(label, value, tone = '') {
+    return `<div class="chart-metric ${tone}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>`;
   }
 
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, (ch) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    })[ch]);
+  function trend(points, key) {
+    const values = points.map((point) => point[key] || 0);
+    const first = values.find((value) => value > 0) || 0;
+    const last = [...values].reverse().find((value) => value > 0) || 0;
+    if (!first && !last) return 'No data';
+    if (!first) return 'Up from 0';
+    const pct = Math.round(((last - first) / first) * 100);
+    if (pct === 0) return 'Flat';
+    return (pct > 0 ? '+' : '') + pct + '%';
   }
 
   function renderChartsPanel(container, entries, getCategory, options = {}) {
     if (!container) return;
 
+    const model = options.model || { entries, days: [] };
     const chartType = options.chartType || 'bar';
-    const total = sumEntries(entries);
-    const category = categorySlices(entries, getCategory);
-    const tasks = taskSlices(entries);
-    const line = lineSeries(entries, getCategory);
-    const rangeLabel = {
-      today: 'Today',
-      yesterday: 'Yesterday',
-      week: 'This Week',
-      month: 'This Month'
-    }[options.range] || 'Today';
-    const typeLabel = {
-      bar: 'Bar Chart',
-      pie: 'Pie Chart',
-      line: 'Line Chart'
-    }[chartType] || 'Bar Chart';
+    const chartView = options.chartView || 'category';
+    const breakdown = buildBreakdowns(entries, getCategory);
+    const total = sum(breakdown.categories);
+    const productiveTotal = sum(breakdown.productive);
+    const neutralTotal = sum(breakdown.neutral);
+    const distractionTotal = sum(breakdown.distraction);
+    const line = makeLineBuckets(model, options.range || 'today');
+    const chartSlices = chartView === 'detail' ? breakdown.detail : breakdown.categories;
+    const topProductive = breakdown.productive[0];
+    const topDistraction = breakdown.distraction[0];
+    const topSubtask = breakdown.subtasks[0];
+    const productivePct = total ? Math.round((productiveTotal / total) * 100) : 0;
+    const distractionPct = total ? Math.round((distractionTotal / total) * 100) : 0;
+    const rangeLabel = { today: 'Today', yesterday: 'Yesterday', week: 'This Week', month: 'This Month' }[options.range] || 'Today';
 
     container.innerHTML = `
-      <p class="charts-summary">${rangeLabel} · ${typeLabel} · Total tracked: <strong>${formatMs(total)}</strong> · ${entries.length} sessions</p>
+      <p class="charts-summary">${rangeLabel} / ${chartType.toUpperCase()} / ${chartView === 'detail' ? 'Detailed Task View' : 'Category View'} / Total: <strong>${formatMs(total)}</strong></p>
+      <div class="chart-metrics-grid">
+        ${metricHTML('Top Productive Task', topProductive ? `${topProductive.label} (${formatMs(topProductive.value)})` : '--', 'productive')}
+        ${metricHTML('Top Distraction', topDistraction ? `${topDistraction.label} (${formatMs(topDistraction.value)})` : '--', 'distraction')}
+        ${metricHTML('Most Used Subtask', topSubtask ? `${topSubtask.label} (${formatMs(topSubtask.value)})` : '--')}
+        ${metricHTML('Productive vs Distraction', `${productivePct}% / ${distractionPct}%`)}
+        ${metricHTML('Daily Trend', trend(line, 'productive'), 'productive')}
+        ${metricHTML('Weekly Trend', options.range === 'week' ? trend(line, 'productive') : 'Select week')}
+        ${metricHTML('Monthly Trend', options.range === 'month' ? trend(line, 'productive') : 'Select month')}
+      </div>
       <div class="charts-grid charts-grid-${chartType}">
         <div class="chart-card chart-card-wide">
-          <h4>Category Breakdown</h4>
+          <h4>${chartView === 'detail' ? 'Detailed Task Contribution' : 'Category Contribution'}</h4>
           <canvas id="chartMain"></canvas>
-          <div class="chart-legend" id="legendMain"></div>
+          <div class="chart-legend">${listHTML(chartSlices, total)}</div>
         </div>
-        <div class="chart-card chart-card-wide">
-          <h4>Task Breakdown</h4>
-          <canvas id="chartTasks"></canvas>
-          <div class="chart-legend" id="legendTasks"></div>
-        </div>
+      </div>
+      <div class="chart-breakdown-grid">
+        <section class="chart-breakdown-card productive">
+          <h4>Productive Analysis</h4>
+          ${listHTML(breakdown.productive, productiveTotal)}
+        </section>
+        <section class="chart-breakdown-card neutral">
+          <h4>Neutral Analysis</h4>
+          ${listHTML(breakdown.neutral, neutralTotal)}
+        </section>
+        <section class="chart-breakdown-card distraction">
+          <h4>Distraction Analysis</h4>
+          ${listHTML(breakdown.distraction, distractionTotal)}
+        </section>
       </div>`;
 
     if (chartType === 'pie') {
-      drawPie(container.querySelector('#chartMain'), category, 'CATEGORY SHARE');
-      drawPie(container.querySelector('#chartTasks'), tasks, 'TOP TASKS');
-      container.querySelector('#legendMain').innerHTML = legendHTML(category, total);
-      container.querySelector('#legendTasks').innerHTML = legendHTML(tasks, total);
-      return;
+      drawPie(container.querySelector('#chartMain'), chartSlices, chartView === 'detail' ? 'TASK SHARE' : 'CATEGORY SHARE');
+    } else if (chartType === 'line') {
+      drawLine(container.querySelector('#chartMain'), line, 'TIME TREND');
+    } else {
+      drawBar(container.querySelector('#chartMain'), chartSlices, chartView === 'detail' ? 'TASK TOTALS' : 'CATEGORY TOTALS');
     }
-
-    if (chartType === 'line') {
-      drawLine(container.querySelector('#chartMain'), line, 'CATEGORY TREND');
-      drawLine(container.querySelector('#chartTasks'), line.map((point) => ({
-        label: point.label,
-        productive: point.productive + point.neutral + point.distraction,
-        neutral: point.neutral,
-        distraction: point.distraction
-      })), 'TRACKED TIME TREND');
-      container.querySelector('#legendMain').innerHTML = lineLegendHTML(line);
-      container.querySelector('#legendTasks').innerHTML = legendHTML(tasks, total);
-      return;
-    }
-
-    drawBar(container.querySelector('#chartMain'), category, 'CATEGORY TOTALS');
-    drawBar(container.querySelector('#chartTasks'), tasks, 'TOP TASK TOTALS');
-    container.querySelector('#legendMain').innerHTML = legendHTML(category, total);
-    container.querySelector('#legendTasks').innerHTML = legendHTML(tasks, total);
   }
 
   global.LifeOSCharts = { renderChartsPanel, COLORS };

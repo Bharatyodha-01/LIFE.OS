@@ -87,6 +87,7 @@
     users: [],
     chartRange: 'today',
     chartType: 'bar',
+    chartView: 'category',
     timelineRange: 'today',
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
@@ -390,10 +391,13 @@
 
     try {
       const range = state.chartRange === 'day' ? 'today' : state.chartRange;
-      const entries = getEntriesForRange(range);
+      const model = getTimelineRangeModel(range);
+      const entries = model.entries;
       LifeOSCharts.renderChartsPanel(container, entries, getCategory, {
         chartType: state.chartType,
-        range
+        chartView: state.chartView,
+        range,
+        model
       });
     } catch (err) {
       console.error('Chart render error:', err);
@@ -2320,6 +2324,19 @@
       btn.addEventListener('click', setChartType);
       btn.addEventListener('touchend', setChartType, { passive: false });
     });
+
+    document.querySelectorAll('.chart-view-btn').forEach((btn) => {
+      const setChartView = (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.chart-view-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.chartView = btn.dataset.chartView || 'category';
+        renderChartsDashboard();
+      };
+      btn.addEventListener('click', setChartView);
+      btn.addEventListener('touchend', setChartView, { passive: false });
+    });
+
     window.addEventListener('pagehide', saveCurrentActiveTask);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') saveCurrentActiveTask();

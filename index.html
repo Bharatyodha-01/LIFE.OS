@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260530-charts-upgrade">
+  <link rel="stylesheet" href="style.css?v=20260530-chart-analytics">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -197,6 +197,10 @@
           <button class="chart-type-btn" data-chart-type="pie" type="button">Pie Chart</button>
           <button class="chart-type-btn" data-chart-type="line" type="button">Line Chart</button>
         </div>
+        <div class="chart-controls chart-view-controls">
+          <button class="chart-view-btn active" data-chart-view="category" type="button">Category View</button>
+          <button class="chart-view-btn" data-chart-view="detail" type="button">Detailed View</button>
+        </div>
         <div id="chartsContainer"></div>
       </div>
     </div>
@@ -345,7 +349,7 @@
   <div class="task-flash hidden" id="taskFlash"></div>
   <div class="toast hidden" id="toast"></div>
 
-  <script src="charts.js?v=20260530-charts-upgrade"></script>
-  <script src="script.js?v=20260530-charts-upgrade"></script>
+  <script src="charts.js?v=20260530-chart-analytics"></script>
+  <script src="script.js?v=20260530-chart-analytics"></script>
 </body>
 </html>

@@ -813,11 +813,11 @@ body.pwa-standalone {
   display: grid;
   grid-template-columns: minmax(150px, 0.95fr) minmax(0, 1.6fr) minmax(100px, 0.65fr);
   align-items: center;
-  gap: 18px;
-  min-height: 68px;
-  padding: 18px;
+  gap: 15px;
+  min-height: 56px;
+  padding: 14px 16px;
   border-left: 3px solid var(--border);
-  margin-bottom: 9px;
+  margin-bottom: 7px;
   background: var(--bg-panel-alt);
   border-radius: 0 var(--radius) var(--radius) 0;
   animation: slide-in 0.25s ease;
@@ -840,13 +840,13 @@ body.pwa-standalone {
 }
 
 .timeline-time {
-  font-size: 1.08rem;
+  font-size: 0.97rem;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
 .timeline-task {
-  font-size: 1.18rem;
+  font-size: 1.06rem;
   line-height: 1.35;
 }
 
@@ -856,7 +856,7 @@ body.pwa-standalone {
 
 .timeline-duration {
   text-align: right;
-  font-size: 1.12rem;
+  font-size: 1rem;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
@@ -1697,7 +1697,8 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 }
 
 .chart-range-btn,
-.chart-type-btn {
+.chart-type-btn,
+.chart-view-btn {
   padding: 8px 16px;
   background: var(--bg-panel-alt);
   border: 1px solid var(--border);
@@ -1711,7 +1712,9 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-range-btn.active,
 .chart-range-btn:hover,
 .chart-type-btn.active,
-.chart-type-btn:hover {
+.chart-type-btn:hover,
+.chart-view-btn.active,
+.chart-view-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: #00ff9d15;
@@ -1736,6 +1739,42 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .charts-summary strong { color: var(--accent); }
 
 .chart-legend-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.chart-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chart-metric {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0c1218;
+}
+
+.chart-metric span {
+  display: block;
+  color: #fff;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-metric strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-metric.productive strong { color: var(--productive); }
+.chart-metric.distraction strong { color: var(--distraction); }
 
 #btnCharts { touch-action: manipulation; cursor: pointer; z-index: 12; position: relative; }
 
@@ -1832,6 +1871,78 @@ body.pwa-standalone .header {
 .chart-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .chart-pct { margin-left: auto; color: #fff; white-space: nowrap; }
+
+.chart-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.chart-breakdown-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0c1218;
+}
+
+.chart-breakdown-card.productive { border-top: 2px solid var(--productive); }
+.chart-breakdown-card.neutral { border-top: 2px solid var(--neutral); }
+.chart-breakdown-card.distraction { border-top: 2px solid var(--distraction); }
+
+.chart-breakdown-card h4 {
+  margin-bottom: 10px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chart-detail-row {
+  margin-bottom: 10px;
+}
+
+.chart-detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.chart-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.chart-detail-top span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-detail-top strong {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chart-contribution {
+  height: 5px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #050608;
+}
+
+.chart-contribution div {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 999px;
+}
 
 .install-pwa {
   margin-top: 16px;
@@ -2083,7 +2194,8 @@ body.pwa-standalone .header {
 
   .settings-tabs .tab,
   .chart-range-btn,
-  .chart-type-btn {
+  .chart-type-btn,
+  .chart-view-btn {
     flex: 1 1 calc(50% - 6px);
     min-width: 0;
     text-align: center;

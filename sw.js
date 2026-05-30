@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v21-charts-upgrade';
+const CACHE_NAME = 'lifeos-pwa-v22-chart-analytics';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -14,16 +14,16 @@ const PRECACHE = [
   './style.css?v=20260529-scrollbar-panels',
   './style.css?v=20260529-readability-spacing',
   './style.css?v=20260529-readability-panels',
-  './style.css?v=20260530-charts-upgrade',
+  './style.css?v=20260530-chart-analytics',
   './style.css?v=20260529-brand-contrast',
   './style.css?v=20260529-locked-brand',
   './style.css?v=20260529-compact-brand',
   './style.css?v=20260529-official-logo',
   './script.js',
   './script.js?v=20260529-key-context',
-  './script.js?v=20260530-charts-upgrade',
+  './script.js?v=20260530-chart-analytics',
   './charts.js',
-  './charts.js?v=20260530-charts-upgrade',
+  './charts.js?v=20260530-chart-analytics',
   './manifest.json',
   './offline.html',
   './favicon.ico',
