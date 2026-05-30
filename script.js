@@ -118,7 +118,13 @@
       document.documentElement.classList.add('splash-complete');
     };
 
-    splash.addEventListener('animationend', dismiss, { once: true });
+    const handleSplashAnimationEnd = (event) => {
+      if (event.target !== splash) return;
+      splash.removeEventListener('animationend', handleSplashAnimationEnd);
+      dismiss();
+    };
+
+    splash.addEventListener('animationend', handleSplashAnimationEnd);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.setTimeout(() => {
@@ -1417,20 +1423,22 @@
         <strong>${title}</strong>
       </button>
       <div class="timeline-section-body" id="missionAnalysisBody">
-        <div class="mission-metrics">
-          ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
-        </div>
-      </div>
-      <div class="task-summary timeline-section${taskSummaryOpen ? '' : ' is-collapsed'}" data-timeline-panel="taskSummary">
-        <button class="task-summary-title timeline-section-toggle" type="button" data-toggle-timeline-panel="taskSummary" aria-expanded="${taskSummaryOpen}" aria-controls="taskSummaryBody">
-          <span class="timeline-section-label">
-            <span class="timeline-section-arrow" aria-hidden="true">${taskSummaryOpen ? '&#9660;' : '&#9654;'}</span>
-            <span>Task Summary</span>
-          </span>
-        </button>
-        <div class="timeline-section-body" id="taskSummaryBody">
-          <div class="task-summary-grid">
-            ${taskSummaryHTML(summary.taskSummary)}
+        <div class="mission-analysis-content">
+          <div class="mission-metrics">
+            ${metricSets[model.range].map(metric => missionMetricHTML(metric, summary)).join('')}
+          </div>
+          <div class="task-summary timeline-section${taskSummaryOpen ? '' : ' is-collapsed'}" data-timeline-panel="taskSummary">
+            <button class="task-summary-title timeline-section-toggle" type="button" data-toggle-timeline-panel="taskSummary" aria-expanded="${taskSummaryOpen}" aria-controls="taskSummaryBody">
+              <span class="timeline-section-label">
+                <span class="timeline-section-arrow" aria-hidden="true">${taskSummaryOpen ? '&#9660;' : '&#9654;'}</span>
+                <span>Task Summary</span>
+              </span>
+            </button>
+            <div class="timeline-section-body" id="taskSummaryBody">
+              <div class="task-summary-grid">
+                ${taskSummaryHTML(summary.taskSummary)}
+              </div>
+            </div>
           </div>
         </div>
       </div>

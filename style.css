@@ -61,7 +61,8 @@ body.pwa-standalone {
   z-index: 20000;
   display: grid;
   place-items: center;
-  background: #000000;
+  min-height: 100vh;
+  background: #020305;
   pointer-events: none;
   opacity: 0;
   will-change: opacity;
@@ -69,8 +70,10 @@ body.pwa-standalone {
 
 .launch-splash-logo {
   display: block;
-  width: min(220px, 42vw, 34vh);
-  height: auto;
+  width: auto;
+  height: min(40vh, 82vw, 460px);
+  max-height: 45vh;
+  max-width: min(82vw, 640px);
   object-fit: contain;
   transform: scale(0.95);
   will-change: transform;
@@ -84,11 +87,6 @@ body.pwa-standalone {
 .splash-pending body > :not(.launch-splash),
 .splash-running body > :not(.launch-splash) {
   opacity: 0;
-}
-
-.splash-running body > :not(.launch-splash) {
-  animation: dashboard-launch-crossfade 2600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: opacity;
 }
 
 .splash-running .launch-splash {
@@ -109,11 +107,6 @@ body.pwa-standalone {
 @keyframes launch-logo-scale {
   0% { transform: scale(0.95); }
   100% { transform: scale(1); }
-}
-
-@keyframes dashboard-launch-crossfade {
-  0%, 70% { opacity: 0; }
-  100% { opacity: 1; }
 }
 
 /* Background effects */
@@ -356,7 +349,7 @@ body.pwa-standalone {
   grid-template-rows: 1fr;
   gap: 12px;
   padding: 12px;
-  height: calc(100vh - 52px - 32px);
+  height: calc(100vh - 52px);
   overflow: hidden;
 }
 
@@ -1343,30 +1336,6 @@ input:focus, select:focus {
 .pref-check { justify-content: flex-start; }
 .pref-check input { accent-color: var(--accent); width: auto; }
 
-/* Command bar footer */
-.command-bar {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 6px 16px;
-  background: #080b0f;
-  border-top: 1px solid var(--border);
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-}
-
-.command-bar kbd {
-  padding: 1px 5px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  color: var(--accent);
-  font-size: 0.6rem;
-}
-
 /* Active commands panel */
 .key-overlay {
   position: relative;
@@ -1615,10 +1584,7 @@ input:focus, select:focus {
 
 /* Fullscreen */
 body.fullscreen .header { padding: 6px 16px; }
-body.fullscreen .dashboard { height: calc(100vh - 44px - 32px); }
-body.fullscreen .command-bar { display: none; }
-
-.footer-credit strong { color: var(--accent); }
+body.fullscreen .dashboard { height: calc(100vh - 44px); }
 
 .user-select {
   font-family: var(--font-mono);
@@ -1797,10 +1763,6 @@ body.pwa-standalone .header {
   padding-top: 6px;
 }
 
-body.pwa-standalone .command-bar {
-  padding-bottom: calc(6px + env(safe-area-inset-bottom));
-}
-
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1949,10 +1911,6 @@ body.pwa-standalone .command-bar {
   .brand-name { font-size: 0.78rem; }
   .brand-subtitle { font-size: 0.6rem; }
   .brand-credit { font-size: 0.54rem; }
-
-  .command-bar {
-    display: none;
-  }
 
   .dashboard {
     gap: 10px;
