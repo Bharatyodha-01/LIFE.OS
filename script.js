@@ -661,6 +661,74 @@
     purgeOldData();
   }
 
+  function saveDayDataByKey(key, data) {
+    localStorage.setItem(userPrefix() + 'day_' + key, JSON.stringify(data));
+    purgeOldData();
+  }
+
+  function startOfNextDayMs(timestamp) {
+    const d = new Date(timestamp);
+    d.setHours(24, 0, 0, 0);
+    return d.getTime();
+  }
+
+  function makeTaskEntry(task, startMs, endMs) {
+    const startDate = new Date(startMs);
+    const endDate = new Date(endMs);
+    return {
+      main: task.main,
+      sub: task.sub || null,
+      category: getCategory(task.main),
+      start: startMs,
+      end: endMs,
+      startFormatted: formatTime(startDate),
+      endFormatted: formatTime(endDate),
+      durationMs: Math.max(0, endMs - startMs)
+    };
+  }
+
+  function saveTaskSegmentsByDay(task, startMs, endMs, options = {}) {
+    if (!task || !task.main || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return [];
+
+    const saved = [];
+    let cursor = startMs;
+    while (cursor < endMs) {
+      const boundary = Math.min(startOfNextDayMs(cursor), endMs);
+      const entry = makeTaskEntry(task, cursor, boundary);
+      if (entry.durationMs > 0) {
+        const key = dateKey(new Date(cursor));
+        const dayData = getDayDataByKey(key);
+        dayData.timeline.push(entry);
+        if (options.incrementSwitches) dayData.taskSwitches = (dayData.taskSwitches || 0) + 1;
+        saveDayDataByKey(key, dayData);
+        saved.push(entry);
+      }
+      cursor = boundary;
+    }
+    return saved;
+  }
+
+  function splitActiveTaskAtDayBoundaries(nowMs = Date.now()) {
+    if (!state.currentTask) return false;
+    const startMs = Number(state.currentTask.startTime);
+    if (!Number.isFinite(startMs) || nowMs <= startMs || dateKey(new Date(startMs)) === dateKey(new Date(nowMs))) return false;
+
+    const todayStart = new Date(nowMs);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStartMs = todayStart.getTime();
+    saveTaskSegmentsByDay(state.currentTask, startMs, todayStartMs, { incrementSwitches: false });
+    state.currentTask.startTime = todayStartMs;
+    state.currentTask.startedAt = todayStartMs;
+    saveCurrentActiveTask();
+    renderTimeline();
+    renderRecent();
+    renderAnalytics();
+    renderChartsIfOpen();
+    updateTodaySummary();
+    updateSystemStatus();
+    return true;
+  }
+
   /** Remove data older than 7 days for current user */
   function purgeOldData() {
     const cutoff = new Date();
@@ -795,21 +863,7 @@
     console.trace('[LIFE-OS] endCurrentTask called');
     console.log('[LIFE-OS] endCurrentTask ending:', state.currentTask.main, state.currentTask.sub || '');
 
-    const entry = {
-      main: state.currentTask.main,
-      sub: state.currentTask.sub || null,
-      category: getCategory(state.currentTask.main),
-      start: state.currentTask.startTime,
-      end: endTime.getTime(),
-      startFormatted: formatTime(new Date(state.currentTask.startTime)),
-      endFormatted: formatTime(endTime),
-      durationMs: endTime.getTime() - state.currentTask.startTime
-    };
-
-    const dayData = getTodayData();
-    dayData.timeline.push(entry);
-    dayData.taskSwitches = (dayData.taskSwitches || 0) + 1;
-    saveTodayData(dayData);
+    saveTaskSegmentsByDay(state.currentTask, state.currentTask.startTime, endTime.getTime(), { incrementSwitches: true });
 
     state.currentTask = null;
     removeActiveTask();
@@ -847,20 +901,7 @@
     };
 
     if (previousTask) {
-      const entry = {
-        main: previousTask.main,
-        sub: previousTask.sub || null,
-        category: getCategory(previousTask.main),
-        start: previousTask.startTime,
-        end: startedAt,
-        startFormatted: formatTime(new Date(previousTask.startTime)),
-        endFormatted: formatTime(new Date(startedAt)),
-        durationMs: startedAt - previousTask.startTime
-      };
-      const dayData = getTodayData();
-      dayData.timeline.push(entry);
-      dayData.taskSwitches = (dayData.taskSwitches || 0) + 1;
-      saveTodayData(dayData);
+      saveTaskSegmentsByDay(previousTask, previousTask.startTime, startedAt, { incrementSwitches: true });
       renderRecent();
       renderAnalytics();
       renderChartsIfOpen();
@@ -1281,6 +1322,7 @@
     });
 
     if (state.currentTask) {
+      splitActiveTaskAtDayBoundaries(now.getTime());
       const elapsed = Date.now() - state.currentTask.startTime;
       document.getElementById('liveTimer').textContent = formatDurationMs(elapsed);
       document.getElementById('taskDuration').textContent = formatDurationHuman(elapsed);
@@ -2280,6 +2322,7 @@
     const restoredTask = restoreCurrentActiveTask();
     if (restoredTask) {
       console.log('[LIFE-OS] Active task restored in init():', restoredTask.main, restoredTask.sub || '');
+      splitActiveTaskAtDayBoundaries(Date.now());
     }
 
     // PHASE 2: Setup events and UI (with restoration flag still active)

@@ -1,5 +1,5 @@
 /**
- * LIFE OS - Compact pie dashboard analytics (vanilla JS)
+ * LIFE OS - Layered analytics dashboard (vanilla JS)
  */
 (function (global) {
   'use strict';
@@ -8,6 +8,7 @@
     productive: '#1e7bff',
     neutral: '#00ff9d',
     distraction: '#ff3355',
+    other: '#1a2a3a',
     text: '#ffffff'
   };
 
@@ -17,7 +18,7 @@
   const DISTRACTION_PALETTE = ['#ff3355', '#ff5f78', '#ff8296', '#d92040', '#ff1744', '#ff6b35', '#ff9a8a', '#c9184a'];
   const TOP_PALETTE = ['#ffaa00', '#1e7bff', '#00ff9d', '#ff3355', '#00b4ff', '#9f8cff', '#36ffc0', '#ff8296'];
 
-  let currentCharts = [];
+  let currentModel = null;
 
   function duration(entry) {
     return Math.max(0, Number(entry.durationMs) || 0);
@@ -67,24 +68,21 @@
     const slices = [...map.values()]
       .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value)
-      .map((item, index) => ({
-        ...item,
-        color: item.color || palette[index % palette.length]
-      }));
+      .map((item, index) => ({ ...item, color: item.color || palette[index % palette.length] }));
     return limit ? slices.slice(0, limit) : slices;
   }
 
   function buildBreakdowns(entries, getCategory) {
-    const categories = new Map([
-      ['Productive', { label: 'Productive', value: 0, color: COLORS.productive }],
-      ['Neutral', { label: 'Neutral', value: 0, color: COLORS.neutral }],
-      ['Distraction', { label: 'Distraction', value: 0, color: COLORS.distraction }]
-    ]);
+    const categoryTotals = {
+      productive: { label: 'Productive', value: 0, color: COLORS.productive },
+      neutral: { label: 'Neutral', value: 0, color: COLORS.neutral },
+      distraction: { label: 'Distraction', value: 0, color: COLORS.distraction }
+    };
     const productive = new Map();
     const productiveSubtasks = new Map();
     const neutral = new Map();
     const distraction = new Map();
-    const topActivities = new Map();
+    const topByCategory = { productive: new Map(), neutral: new Map(), distraction: new Map() };
 
     entries.forEach((entry) => {
       const d = duration(entry);
@@ -92,32 +90,31 @@
       const cat = categoryKey(entry, getCategory);
       const taskLabel = entry.main || '--';
 
-      addToMap(topActivities, detailLabel(entry), d);
+      categoryTotals[cat].value += d;
+      addToMap(topByCategory[cat], detailLabel(entry), d);
 
       if (cat === 'productive') {
-        categories.get('Productive').value += d;
         addToMap(productive, taskLabel, d);
         if (entry.sub) addToMap(productiveSubtasks, entry.sub, d);
-        return;
-      }
-
-      if (cat === 'distraction') {
-        categories.get('Distraction').value += d;
+      } else if (cat === 'distraction') {
         addToMap(distraction, taskLabel, d);
-        return;
+      } else {
+        addToMap(neutral, taskLabel, d);
       }
-
-      categories.get('Neutral').value += d;
-      addToMap(neutral, taskLabel, d);
     });
 
     return {
-      categories: [...categories.values()],
+      categories: [categoryTotals.productive, categoryTotals.neutral, categoryTotals.distraction],
+      categoryTotals,
       productive: toSlices(productive, PRODUCTIVE_PALETTE),
       productiveSubtasks: toSlices(productiveSubtasks, SUBTASK_PALETTE),
       neutral: toSlices(neutral, NEUTRAL_PALETTE),
       distraction: toSlices(distraction, DISTRACTION_PALETTE),
-      topActivities: toSlices(topActivities, TOP_PALETTE, 8)
+      topByCategory: {
+        productive: toSlices(topByCategory.productive, TOP_PALETTE, 8),
+        neutral: toSlices(topByCategory.neutral, TOP_PALETTE, 8),
+        distraction: toSlices(topByCategory.distraction, TOP_PALETTE, 8)
+      }
     };
   }
 
@@ -143,10 +140,10 @@
   }
 
   function drawEmpty(canvas, message, large) {
-    const size = canvasSize(canvas, large ? 720 : 280, large ? 520 : 190);
+    const size = canvasSize(canvas, large ? 720 : 300, large ? 500 : 210);
     const ctx = setupCanvas(canvas, size.width, size.height);
     if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = COLORS.text;
     ctx.font = `700 ${large ? 24 : 15}px Share Tech Mono, monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -155,18 +152,19 @@
 
   function drawPie(canvas, slices, options = {}) {
     if (!canvas) return;
-    const large = Boolean(options.large);
     const active = slices.filter((slice) => slice.value > 0);
-    if (!active.length) return drawEmpty(canvas, options.emptyMessage, large);
+    if (!active.length) return drawEmpty(canvas, options.emptyMessage, options.large);
 
-    const size = canvasSize(canvas, large ? 780 : 320, large ? 560 : 210);
+    const large = Boolean(options.large);
+    const overview = Boolean(options.overview);
+    const size = canvasSize(canvas, large ? 780 : 360, large ? 540 : overview ? 300 : 210);
     const ctx = setupCanvas(canvas, size.width, size.height);
     if (!ctx) return;
 
     const total = sum(active);
     const cx = size.width / 2;
-    const cy = size.height / 2 + (large ? 8 : 3);
-    const radius = Math.min(size.width * 0.3, size.height * 0.39, large ? 210 : 82);
+    const cy = size.height / 2 + 3;
+    const radius = Math.min(size.width * 0.3, size.height * 0.38, large ? 205 : overview ? 118 : 78);
     let start = -Math.PI / 2;
 
     active.forEach((slice) => {
@@ -184,23 +182,24 @@
     });
 
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.44, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = '#0a0e14';
     ctx.fill();
     ctx.strokeStyle = '#1a2a3a';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const top = active[0];
-    const pct = Math.round((top.value / total) * 100);
+    const centerPct = typeof options.centerPct === 'number'
+      ? options.centerPct
+      : Math.round((active[0].value / total) * 100);
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${large ? 42 : 24}px Orbitron, sans-serif`;
-    ctx.fillText(pct + '%', cx, cy - (large ? 10 : 5));
-    ctx.fillStyle = top.color;
-    ctx.font = `700 ${large ? 18 : 11}px Share Tech Mono, monospace`;
-    ctx.fillText(top.label.slice(0, large ? 26 : 18), cx, cy + (large ? 30 : 18));
+    ctx.font = `900 ${large ? 42 : overview ? 34 : 24}px Orbitron, sans-serif`;
+    ctx.fillText(centerPct + '%', cx, cy - (large ? 10 : 5));
+    ctx.fillStyle = options.centerColor || active[0].color;
+    ctx.font = `700 ${large ? 18 : overview ? 14 : 11}px Share Tech Mono, monospace`;
+    ctx.fillText((options.centerLabel || active[0].label).slice(0, large ? 26 : 18), cx, cy + (large ? 30 : overview ? 24 : 18));
   }
 
   function legendHTML(items, total, compact = true) {
@@ -217,80 +216,133 @@
     }).join('') + (hiddenCount ? `<div class="chart-legend-more">+${hiddenCount} more</div>` : '');
   }
 
-  function chartCardHTML(chart) {
-    const hasData = chart.items.length && chart.total > 0;
-    return `<section class="chart-card chart-card-${chart.tone}">
+  function summarySlices(category, value, total) {
+    return [
+      { label: category.label, value, color: category.color },
+      { label: 'Other', value: Math.max(0, total - value), color: COLORS.other }
+    ];
+  }
+
+  function categoryCardHTML(key, title, category, total) {
+    const pct = total ? Math.round((category.value / total) * 100) : 0;
+    return `<section class="chart-card chart-card-${key}">
       <div class="chart-card-head">
         <div>
-          <h3>${escapeHtml(chart.title)}</h3>
-          <span>${hasData ? formatMs(chart.total) : '--'}</span>
+          <h3>${escapeHtml(title)}</h3>
+          <span>${formatMs(category.value)} / ${pct}%</span>
         </div>
-        <button class="chart-expand-btn" data-expand-chart="${chart.id}" type="button">View Large</button>
+        <button class="chart-expand-btn" data-detail-category="${key}" type="button">Detailed Analysis &rarr;</button>
       </div>
-      ${hasData ? `
-        <div class="chart-card-body">
-          <canvas id="${chart.id}" class="chart-pie-canvas" aria-label="${escapeHtml(chart.title)} pie chart"></canvas>
-          <div class="chart-legend">${legendHTML(chart.items, chart.total, true)}</div>
-        </div>` : `<p class="chart-empty-text">${escapeHtml(chart.emptyMessage)}</p>`}
+      <div class="chart-card-body chart-card-body-summary">
+        <canvas id="chart${title}" class="chart-pie-canvas" aria-label="${escapeHtml(title)} summary pie chart"></canvas>
+        <div class="chart-summary-stat">
+          <strong>${pct}%</strong>
+          <span>${formatMs(category.value)}</span>
+        </div>
+      </div>
     </section>`;
   }
 
-  function expandedOverlayHTML() {
-    return `<div class="chart-expand-overlay hidden" id="chartExpandOverlay" aria-hidden="true">
-      <div class="chart-expand-modal">
-        <div class="chart-expand-head">
+  function detailOverlayHTML() {
+    return `<div class="chart-detail-overlay hidden" id="chartDetailOverlay" aria-hidden="true">
+      <div class="chart-detail-modal">
+        <div class="chart-detail-head">
           <div>
-            <h3 id="chartExpandTitle">Chart</h3>
-            <span id="chartExpandTotal">--</span>
+            <h3 id="chartDetailTitle">Detailed Analysis</h3>
+            <span id="chartDetailTotal">--</span>
           </div>
-          <button class="btn-close" id="chartExpandClose" type="button">&times;</button>
+          <button class="btn-close" id="chartDetailClose" type="button">&times;</button>
         </div>
-        <div class="chart-expand-body">
-          <canvas id="chartExpandCanvas" class="chart-expand-canvas" aria-label="Expanded pie chart"></canvas>
-          <div class="chart-legend chart-expand-legend" id="chartExpandLegend"></div>
-        </div>
+        <div class="chart-detail-content" id="chartDetailContent"></div>
       </div>
     </div>`;
   }
 
-  function openExpandedChart(container, chartId) {
-    const chart = currentCharts.find((item) => item.id === chartId);
-    if (!chart) return;
-
-    const overlay = container.querySelector('#chartExpandOverlay');
-    const title = container.querySelector('#chartExpandTitle');
-    const total = container.querySelector('#chartExpandTotal');
-    const legend = container.querySelector('#chartExpandLegend');
-    const canvas = container.querySelector('#chartExpandCanvas');
-    if (!overlay || !title || !total || !legend || !canvas) return;
-
-    title.textContent = chart.title;
-    total.textContent = chart.total > 0 ? `Total: ${formatMs(chart.total)}` : '--';
-    legend.innerHTML = chart.items.length ? legendHTML(chart.items, chart.total, false) : `<p class="chart-empty-text">${escapeHtml(chart.emptyMessage)}</p>`;
-    overlay.classList.remove('hidden');
-    overlay.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => drawPie(canvas, chart.items, { large: true, emptyMessage: chart.emptyMessage }));
+  function detailSectionHTML(id, title, items, total, emptyMessage) {
+    const hasData = items.length && total > 0;
+    return `<section class="chart-detail-section">
+      <div class="chart-detail-section-head">
+        <h4>${escapeHtml(title)}</h4>
+        <span>${hasData ? formatMs(total) : '--'}</span>
+      </div>
+      ${hasData ? `
+        <div class="chart-detail-grid">
+          <canvas id="${id}" class="chart-detail-canvas" aria-label="${escapeHtml(title)} pie chart"></canvas>
+          <div class="chart-legend chart-detail-legend">${legendHTML(items, total, false)}</div>
+        </div>` : `<p class="chart-empty-text">${escapeHtml(emptyMessage)}</p>`}
+    </section>`;
   }
 
-  function closeExpandedChart(container) {
-    const overlay = container.querySelector('#chartExpandOverlay');
+  function closeDetail(container) {
+    const overlay = container.querySelector('#chartDetailOverlay');
     if (!overlay) return;
     overlay.classList.add('hidden');
     overlay.setAttribute('aria-hidden', 'true');
   }
 
-  function bindExpandControls(container) {
-    container.querySelectorAll('[data-expand-chart]').forEach((button) => {
-      button.addEventListener('click', () => openExpandedChart(container, button.dataset.expandChart));
+  function openDetail(container, category) {
+    if (!currentModel) return;
+    const config = {
+      productive: {
+        title: 'Productive Detailed Analysis',
+        total: currentModel.productiveTotal,
+        mainItems: currentModel.breakdown.productive,
+        mainTitle: 'Productive Activities',
+        empty: 'No productive data in this range'
+      },
+      neutral: {
+        title: 'Neutral Detailed Analysis',
+        total: currentModel.neutralTotal,
+        mainItems: currentModel.breakdown.neutral,
+        mainTitle: 'Neutral Activities',
+        empty: 'No neutral data in this range'
+      },
+      distraction: {
+        title: 'Distraction Detailed Analysis',
+        total: currentModel.distractionTotal,
+        mainItems: currentModel.breakdown.distraction,
+        mainTitle: 'Distraction Activities',
+        empty: 'No distraction data in this range'
+      }
+    }[category];
+    if (!config) return;
+
+    const overlay = container.querySelector('#chartDetailOverlay');
+    const title = container.querySelector('#chartDetailTitle');
+    const total = container.querySelector('#chartDetailTotal');
+    const content = container.querySelector('#chartDetailContent');
+    if (!overlay || !title || !total || !content) return;
+
+    const topItems = currentModel.breakdown.topByCategory[category] || [];
+    const topTotal = sum(topItems);
+    title.textContent = config.title;
+    total.textContent = `Total: ${formatMs(config.total)}`;
+    content.innerHTML = `
+      ${detailSectionHTML('chartDetailMain', config.mainTitle, config.mainItems, config.total, config.empty)}
+      ${category === 'productive' ? detailSectionHTML('chartDetailSubtasks', 'Subtask Breakdown', currentModel.breakdown.productiveSubtasks, currentModel.subtaskTotal, 'No sub-task data available.') : ''}
+      ${detailSectionHTML('chartDetailTop', 'Top Activities', topItems, topTotal, 'No activity data in this range')}`;
+
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      drawPie(container.querySelector('#chartDetailMain'), config.mainItems, { large: true, emptyMessage: config.empty });
+      if (category === 'productive') {
+        drawPie(container.querySelector('#chartDetailSubtasks'), currentModel.breakdown.productiveSubtasks, { large: true, emptyMessage: 'No sub-task data available.' });
+      }
+      drawPie(container.querySelector('#chartDetailTop'), topItems, { large: true, emptyMessage: 'No activity data in this range' });
     });
+  }
 
-    const close = container.querySelector('#chartExpandClose');
-    if (close) close.addEventListener('click', () => closeExpandedChart(container));
-
-    const overlay = container.querySelector('#chartExpandOverlay');
+  function bindDetailControls(container) {
+    container.querySelectorAll('[data-detail-category]').forEach((button) => {
+      button.addEventListener('click', () => openDetail(container, button.dataset.detailCategory));
+    });
+    const close = container.querySelector('#chartDetailClose');
+    if (close) close.addEventListener('click', () => closeDetail(container));
+    const overlay = container.querySelector('#chartDetailOverlay');
     if (overlay) {
       overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) closeExpandedChart(container);
+        if (event.target === overlay) closeDetail(container);
       });
     }
   }
@@ -300,36 +352,60 @@
 
     const breakdown = buildBreakdowns(entries || [], getCategory);
     const total = sum(breakdown.categories);
-    const productiveTotal = sum(breakdown.productive);
+    const productiveTotal = breakdown.categoryTotals.productive.value;
+    const neutralTotal = breakdown.categoryTotals.neutral.value;
+    const distractionTotal = breakdown.categoryTotals.distraction.value;
     const subtaskTotal = sum(breakdown.productiveSubtasks);
-    const neutralTotal = sum(breakdown.neutral);
-    const distractionTotal = sum(breakdown.distraction);
-    const topTotal = sum(breakdown.topActivities);
     const rangeLabel = { today: 'Today', yesterday: 'Yesterday', week: 'This Week', month: 'This Month' }[options.range] || 'Today';
 
-    currentCharts = [
-      { id: 'chartTimeDistribution', title: 'Time Distribution', tone: 'distribution', items: breakdown.categories, total, emptyMessage: 'No data in this range' },
-      { id: 'chartProductive', title: 'Productive Breakdown', tone: 'productive', items: breakdown.productive, total: productiveTotal, emptyMessage: 'No productive data in this range' },
-      { id: 'chartProductiveSubtasks', title: 'Productive Subtasks', tone: 'subtasks', items: breakdown.productiveSubtasks, total: subtaskTotal, emptyMessage: 'No sub-task data available.' },
-      { id: 'chartNeutral', title: 'Neutral Breakdown', tone: 'neutral', items: breakdown.neutral, total: neutralTotal, emptyMessage: 'No neutral data in this range' },
-      { id: 'chartDistraction', title: 'Distraction Breakdown', tone: 'distraction', items: breakdown.distraction, total: distractionTotal, emptyMessage: 'No distraction data in this range' },
-      { id: 'chartTopActivities', title: 'Top Activities', tone: 'top', items: breakdown.topActivities, total: topTotal, emptyMessage: 'No activity data in this range' }
-    ];
+    currentModel = { breakdown, total, productiveTotal, neutralTotal, distractionTotal, subtaskTotal };
 
     container.innerHTML = `
       <div class="charts-period-title">
         <span>${escapeHtml(rangeLabel)}</span>
         <strong>Total Logged: ${formatMs(total)}</strong>
       </div>
-      <div class="charts-dashboard-grid">
-        ${currentCharts.map(chartCardHTML).join('')}
+      <div class="charts-hub-layout">
+        <section class="chart-overview-card">
+          <div class="chart-card-head chart-overview-head">
+            <div>
+              <h3>Overall Time Distribution</h3>
+              <span>${formatMs(total)}</span>
+            </div>
+          </div>
+          <div class="chart-overview-body">
+            <canvas id="chartOverall" class="chart-overview-canvas" aria-label="Overall time distribution pie chart"></canvas>
+            <div class="chart-legend chart-overview-legend">${legendHTML(breakdown.categories, total, false)}</div>
+          </div>
+        </section>
+        <div class="charts-category-row">
+          ${categoryCardHTML('productive', 'Productive', breakdown.categoryTotals.productive, total)}
+          ${categoryCardHTML('neutral', 'Neutral', breakdown.categoryTotals.neutral, total)}
+          ${categoryCardHTML('distraction', 'Distraction', breakdown.categoryTotals.distraction, total)}
+        </div>
       </div>
-      ${expandedOverlayHTML()}`;
+      ${detailOverlayHTML()}`;
 
-    bindExpandControls(container);
+    bindDetailControls(container);
     requestAnimationFrame(() => {
-      currentCharts.forEach((chart) => {
-        drawPie(container.querySelector('#' + chart.id), chart.items, { emptyMessage: chart.emptyMessage });
+      drawPie(container.querySelector('#chartOverall'), breakdown.categories, { overview: true, emptyMessage: 'No data in this range' });
+      drawPie(container.querySelector('#chartProductive'), summarySlices(breakdown.categoryTotals.productive, productiveTotal, total), {
+        centerPct: total ? Math.round((productiveTotal / total) * 100) : 0,
+        centerLabel: 'Productive',
+        centerColor: COLORS.productive,
+        emptyMessage: 'No productive data in this range'
+      });
+      drawPie(container.querySelector('#chartNeutral'), summarySlices(breakdown.categoryTotals.neutral, neutralTotal, total), {
+        centerPct: total ? Math.round((neutralTotal / total) * 100) : 0,
+        centerLabel: 'Neutral',
+        centerColor: COLORS.neutral,
+        emptyMessage: 'No neutral data in this range'
+      });
+      drawPie(container.querySelector('#chartDistraction'), summarySlices(breakdown.categoryTotals.distraction, distractionTotal, total), {
+        centerPct: total ? Math.round((distractionTotal / total) * 100) : 0,
+        centerLabel: 'Distraction',
+        centerColor: COLORS.distraction,
+        emptyMessage: 'No distraction data in this range'
       });
     });
   }
