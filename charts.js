@@ -12,11 +12,7 @@
     text: '#ffffff'
   };
 
-  const PRODUCTIVE_PALETTE = ['#1e7bff', '#00b4ff', '#6fb0ff', '#3d7cff', '#35d5ff', '#9f8cff', '#2de2e6', '#78a8ff'];
-  const SUBTASK_PALETTE = ['#00b4ff', '#6fb0ff', '#1e7bff', '#36ffc0', '#9f8cff', '#ffaa00', '#4c9bff', '#b8ff7a'];
-  const NEUTRAL_PALETTE = ['#00ff9d', '#36ffc0', '#7dffcf', '#00cc7d', '#b8ff7a', '#4ee8a7', '#94ffd8', '#18d68a'];
-  const DISTRACTION_PALETTE = ['#ff3355', '#ff5f78', '#ff8296', '#d92040', '#ff1744', '#ff6b35', '#ff9a8a', '#c9184a'];
-  const TOP_PALETTE = ['#ffaa00', '#1e7bff', '#00ff9d', '#ff3355', '#00b4ff', '#9f8cff', '#36ffc0', '#ff8296'];
+  const CONTRAST_PALETTE = ['#1e7bff', '#00ff9d', '#ff3355', '#ffaa00', '#fff23d', '#9f5cff', '#00e5ff', '#ff4fd8', '#ffffff'];
 
   let currentModel = null;
 
@@ -64,12 +60,38 @@
     map.get(key).value += value;
   }
 
-  function toSlices(map, palette, limit) {
+  function addTreeItem(tree, entry, value) {
+    const main = entry.main || '--';
+    const sub = entry.sub || 'No Subtask';
+    if (!tree.has(main)) tree.set(main, { label: main, value: 0, subtasks: new Map() });
+    const item = tree.get(main);
+    item.value += value;
+    addToMap(item.subtasks, sub, value);
+  }
+
+  function colorForIndex(index) {
+    if (index < CONTRAST_PALETTE.length) return CONTRAST_PALETTE[index];
+    const hue = Math.round((index * 137.508) % 360);
+    return `hsl(${hue}, 96%, 58%)`;
+  }
+
+  function toSlices(map, limit, offset = 0) {
     const slices = [...map.values()]
       .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value)
-      .map((item, index) => ({ ...item, color: item.color || palette[index % palette.length] }));
+      .map((item, index) => ({ ...item, color: item.color || colorForIndex(index + offset) }));
     return limit ? slices.slice(0, limit) : slices;
+  }
+
+  function treeToItems(tree) {
+    return [...tree.values()]
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .map((item) => ({
+        label: item.label,
+        value: item.value,
+        subtasks: toSlices(item.subtasks)
+      }));
   }
 
   function buildBreakdowns(entries, getCategory) {
@@ -82,7 +104,9 @@
     const productiveSubtasks = new Map();
     const neutral = new Map();
     const distraction = new Map();
+    const allActivities = new Map();
     const topByCategory = { productive: new Map(), neutral: new Map(), distraction: new Map() };
+    const treeByCategory = { productive: new Map(), neutral: new Map(), distraction: new Map() };
 
     entries.forEach((entry) => {
       const d = duration(entry);
@@ -91,7 +115,9 @@
       const taskLabel = entry.main || '--';
 
       categoryTotals[cat].value += d;
+      addToMap(allActivities, detailLabel(entry), d);
       addToMap(topByCategory[cat], detailLabel(entry), d);
+      addTreeItem(treeByCategory[cat], entry, d);
 
       if (cat === 'productive') {
         addToMap(productive, taskLabel, d);
@@ -106,14 +132,20 @@
     return {
       categories: [categoryTotals.productive, categoryTotals.neutral, categoryTotals.distraction],
       categoryTotals,
-      productive: toSlices(productive, PRODUCTIVE_PALETTE),
-      productiveSubtasks: toSlices(productiveSubtasks, SUBTASK_PALETTE),
-      neutral: toSlices(neutral, NEUTRAL_PALETTE),
-      distraction: toSlices(distraction, DISTRACTION_PALETTE),
+      productive: toSlices(productive),
+      productiveSubtasks: toSlices(productiveSubtasks),
+      neutral: toSlices(neutral),
+      distraction: toSlices(distraction),
+      topActivities: toSlices(allActivities, 5),
       topByCategory: {
-        productive: toSlices(topByCategory.productive, TOP_PALETTE, 8),
-        neutral: toSlices(topByCategory.neutral, TOP_PALETTE, 8),
-        distraction: toSlices(topByCategory.distraction, TOP_PALETTE, 8)
+        productive: toSlices(topByCategory.productive, 8),
+        neutral: toSlices(topByCategory.neutral, 8),
+        distraction: toSlices(topByCategory.distraction, 8)
+      },
+      treeByCategory: {
+        productive: treeToItems(treeByCategory.productive),
+        neutral: treeToItems(treeByCategory.neutral),
+        distraction: treeToItems(treeByCategory.distraction)
       }
     };
   }
@@ -164,7 +196,7 @@
     const total = sum(active);
     const cx = size.width / 2;
     const cy = size.height / 2 + 3;
-    const radius = Math.min(size.width * 0.3, size.height * 0.38, large ? 205 : overview ? 118 : 78);
+    const radius = Math.min(size.width * 0.28, size.height * 0.36, large ? 205 : overview ? 95 : 76);
     let start = -Math.PI / 2;
 
     active.forEach((slice) => {
@@ -195,10 +227,10 @@
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${large ? 42 : overview ? 34 : 24}px Orbitron, sans-serif`;
+    ctx.font = `900 ${large ? 48 : overview ? 39 : 28}px Orbitron, sans-serif`;
     ctx.fillText(centerPct + '%', cx, cy - (large ? 10 : 5));
     ctx.fillStyle = options.centerColor || active[0].color;
-    ctx.font = `700 ${large ? 18 : overview ? 14 : 11}px Share Tech Mono, monospace`;
+    ctx.font = `700 ${large ? 21 : overview ? 16 : 13}px Share Tech Mono, monospace`;
     ctx.fillText((options.centerLabel || active[0].label).slice(0, large ? 26 : 18), cx, cy + (large ? 30 : overview ? 24 : 18));
   }
 
@@ -223,21 +255,56 @@
     ];
   }
 
+  function topActivitiesHTML(items, total) {
+    if (!items.length || total <= 0) {
+      return '<p class="chart-empty-text chart-empty-compact">No activity data in this range</p>';
+    }
+    return items.slice(0, 5).map((item, index) => {
+      const pct = Math.round((item.value / total) * 100);
+      return `<div class="chart-top-row">
+        <span class="chart-top-rank">#${index + 1}</span>
+        <span class="chart-dot" style="background:${item.color}"></span>
+        <span class="chart-top-name">${escapeHtml(item.label)}</span>
+        <strong>${formatMs(item.value)}</strong>
+        <em>${pct}%</em>
+      </div>`;
+    }).join('');
+  }
+
+  function topActivitiesPanelHTML(items, total) {
+    return `<section class="chart-top-panel">
+      <div class="chart-card-head">
+        <div>
+          <h3>Top Activities</h3>
+          <span>Highest time sinks</span>
+        </div>
+      </div>
+      <div class="chart-top-list">${topActivitiesHTML(items, total)}</div>
+    </section>`;
+  }
+
   function categoryCardHTML(key, title, category, total) {
     const pct = total ? Math.round((category.value / total) * 100) : 0;
+    const topItems = currentModel.breakdown.topByCategory[key] || [];
     return `<section class="chart-card chart-card-${key}">
       <div class="chart-card-head">
         <div>
           <h3>${escapeHtml(title)}</h3>
-          <span>${formatMs(category.value)} / ${pct}%</span>
+          <span>${formatMs(category.value)} | ${pct}%</span>
         </div>
         <button class="chart-expand-btn" data-detail-category="${key}" type="button">Detailed Analysis &rarr;</button>
       </div>
       <div class="chart-card-body chart-card-body-summary">
         <canvas id="chart${title}" class="chart-pie-canvas" aria-label="${escapeHtml(title)} summary pie chart"></canvas>
-        <div class="chart-summary-stat">
-          <strong>${pct}%</strong>
-          <span>${formatMs(category.value)}</span>
+        <div class="chart-category-detail">
+          <div class="chart-summary-stat">
+            <strong>${pct}%</strong>
+            <span>${formatMs(category.value)}</span>
+          </div>
+          <div class="chart-card-top">
+            <h4>Top Tasks:</h4>
+            ${topActivitiesHTML(topItems.slice(0, 3), category.value)}
+          </div>
         </div>
       </div>
     </section>`;
@@ -271,6 +338,31 @@
           <div class="chart-legend chart-detail-legend">${legendHTML(items, total, false)}</div>
         </div>` : `<p class="chart-empty-text">${escapeHtml(emptyMessage)}</p>`}
     </section>`;
+  }
+
+  function taskTreeHTML(items, total) {
+    if (!items.length || total <= 0) return '<p class="chart-empty-text">No task distribution in this range</p>';
+    return `<div class="chart-task-tree">
+      ${items.map((item) => {
+        const pct = Math.round((item.value / total) * 100);
+        const subtasks = item.subtasks && item.subtasks.length ? item.subtasks : [{ label: 'No Subtask', value: item.value }];
+        return `<div class="chart-tree-group">
+          <div class="chart-tree-parent">
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${formatMs(item.value)} | ${pct}%</strong>
+          </div>
+          <div class="chart-tree-children">
+            ${subtasks.map((subtask) => {
+              const subPct = Math.round((subtask.value / total) * 100);
+              return `<div class="chart-tree-child">
+                <span>${escapeHtml(subtask.label)}</span>
+                <strong>${formatMs(subtask.value)} | ${subPct}%</strong>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
 
   function closeDetail(container) {
@@ -314,11 +406,19 @@
     if (!overlay || !title || !total || !content) return;
 
     const topItems = currentModel.breakdown.topByCategory[category] || [];
+    const treeItems = currentModel.breakdown.treeByCategory[category] || [];
     const topTotal = sum(topItems);
     title.textContent = config.title;
     total.textContent = `Total: ${formatMs(config.total)}`;
     content.innerHTML = `
       ${detailSectionHTML('chartDetailMain', config.mainTitle, config.mainItems, config.total, config.empty)}
+      <section class="chart-detail-section">
+        <div class="chart-detail-section-head">
+          <h4>Actual Task Distribution</h4>
+          <span>${formatMs(config.total)}</span>
+        </div>
+        ${taskTreeHTML(treeItems, config.total)}
+      </section>
       ${category === 'productive' ? detailSectionHTML('chartDetailSubtasks', 'Subtask Breakdown', currentModel.breakdown.productiveSubtasks, currentModel.subtaskTotal, 'No sub-task data available.') : ''}
       ${detailSectionHTML('chartDetailTop', 'Top Activities', topItems, topTotal, 'No activity data in this range')}`;
 
@@ -366,18 +466,21 @@
         <strong>Total Logged: ${formatMs(total)}</strong>
       </div>
       <div class="charts-hub-layout">
-        <section class="chart-overview-card">
-          <div class="chart-card-head chart-overview-head">
-            <div>
-              <h3>Overall Time Distribution</h3>
-              <span>${formatMs(total)}</span>
+        <div class="charts-top-grid">
+          <section class="chart-overview-card">
+            <div class="chart-card-head chart-overview-head">
+              <div>
+                <h3>Overall Time Distribution</h3>
+                <span>${formatMs(total)}</span>
+              </div>
             </div>
-          </div>
-          <div class="chart-overview-body">
-            <canvas id="chartOverall" class="chart-overview-canvas" aria-label="Overall time distribution pie chart"></canvas>
-            <div class="chart-legend chart-overview-legend">${legendHTML(breakdown.categories, total, false)}</div>
-          </div>
-        </section>
+            <div class="chart-overview-body">
+              <canvas id="chartOverall" class="chart-overview-canvas" aria-label="Overall time distribution pie chart"></canvas>
+              <div class="chart-legend chart-overview-legend">${legendHTML(breakdown.categories, total, false)}</div>
+            </div>
+          </section>
+          ${topActivitiesPanelHTML(breakdown.topActivities, total)}
+        </div>
         <div class="charts-category-row">
           ${categoryCardHTML('productive', 'Productive', breakdown.categoryTotals.productive, total)}
           ${categoryCardHTML('neutral', 'Neutral', breakdown.categoryTotals.neutral, total)}
@@ -389,19 +492,19 @@
     bindDetailControls(container);
     requestAnimationFrame(() => {
       drawPie(container.querySelector('#chartOverall'), breakdown.categories, { overview: true, emptyMessage: 'No data in this range' });
-      drawPie(container.querySelector('#chartProductive'), summarySlices(breakdown.categoryTotals.productive, productiveTotal, total), {
+      drawPie(container.querySelector('#chartProductive'), breakdown.topByCategory.productive, {
         centerPct: total ? Math.round((productiveTotal / total) * 100) : 0,
         centerLabel: 'Productive',
         centerColor: COLORS.productive,
         emptyMessage: 'No productive data in this range'
       });
-      drawPie(container.querySelector('#chartNeutral'), summarySlices(breakdown.categoryTotals.neutral, neutralTotal, total), {
+      drawPie(container.querySelector('#chartNeutral'), breakdown.topByCategory.neutral, {
         centerPct: total ? Math.round((neutralTotal / total) * 100) : 0,
         centerLabel: 'Neutral',
         centerColor: COLORS.neutral,
         emptyMessage: 'No neutral data in this range'
       });
-      drawPie(container.querySelector('#chartDistraction'), summarySlices(breakdown.categoryTotals.distraction, distractionTotal, total), {
+      drawPie(container.querySelector('#chartDistraction'), breakdown.topByCategory.distraction, {
         centerPct: total ? Math.round((distractionTotal / total) * 100) : 0,
         centerLabel: 'Distraction',
         centerColor: COLORS.distraction,
