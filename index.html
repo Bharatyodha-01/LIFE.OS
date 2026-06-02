@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260530-chart-analytics">
+  <link rel="stylesheet" href="style.css?v=20260602-pie-analytics">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -180,26 +180,17 @@
   </section>
 
   <div class="modal-overlay hidden" id="chartsModal">
-    <div class="modal modal-wide">
+    <div class="modal modal-wide charts-modal">
       <div class="modal-header">
-        <h2>Analytics Dashboard</h2>
+        <h2>Charts Analytics</h2>
         <button class="btn-close" id="btnCloseCharts" type="button">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="chart-controls">
-          <button class="chart-range-btn active" data-range="today" type="button">Today</button>
-          <button class="chart-range-btn" data-range="yesterday" type="button">Yesterday</button>
-          <button class="chart-range-btn" data-range="week" type="button">This Week</button>
-          <button class="chart-range-btn" data-range="month" type="button">This Month</button>
-        </div>
-        <div class="chart-controls chart-type-controls">
-          <button class="chart-type-btn active" data-chart-type="bar" type="button">Bar Chart</button>
-          <button class="chart-type-btn" data-chart-type="pie" type="button">Pie Chart</button>
-          <button class="chart-type-btn" data-chart-type="line" type="button">Line Chart</button>
-        </div>
-        <div class="chart-controls chart-view-controls">
-          <button class="chart-view-btn active" data-chart-view="category" type="button">Category View</button>
-          <button class="chart-view-btn" data-chart-view="detail" type="button">Detailed View</button>
+        <div class="chart-controls chart-range-controls" aria-label="Chart period filters">
+          <button class="chart-range-btn active" data-range="today" type="button">TODAY</button>
+          <button class="chart-range-btn" data-range="yesterday" type="button">YESTERDAY</button>
+          <button class="chart-range-btn" data-range="week" type="button">THIS WEEK</button>
+          <button class="chart-range-btn" data-range="month" type="button">THIS MONTH</button>
         </div>
         <div id="chartsContainer"></div>
       </div>
@@ -349,7 +340,7 @@
   <div class="task-flash hidden" id="taskFlash"></div>
   <div class="toast hidden" id="toast"></div>
 
-  <script src="charts.js?v=20260530-chart-analytics"></script>
-  <script src="script.js?v=20260530-chart-analytics"></script>
+  <script src="charts.js?v=20260602-pie-analytics"></script>
+  <script src="script.js?v=20260602-pie-analytics"></script>
 </body>
 </html>

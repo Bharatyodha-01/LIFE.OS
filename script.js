@@ -86,8 +86,6 @@
     activeUserId: 'user1',
     users: [],
     chartRange: 'today',
-    chartType: 'bar',
-    chartView: 'category',
     timelineRange: 'today',
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
@@ -394,8 +392,6 @@
       const model = getTimelineRangeModel(range);
       const entries = model.entries;
       LifeOSCharts.renderChartsPanel(container, entries, getCategory, {
-        chartType: state.chartType,
-        chartView: state.chartView,
         range,
         model
       });
@@ -2311,30 +2307,6 @@
     window.addEventListener('beforeunload', () => {
       saveCurrentActiveTask();
       console.log('[LIFE-OS] beforeunload: active task saved');
-    });
-
-    document.querySelectorAll('.chart-type-btn').forEach((btn) => {
-      const setChartType = (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.chart-type-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.chartType = btn.dataset.chartType || 'bar';
-        renderChartsDashboard();
-      };
-      btn.addEventListener('click', setChartType);
-      btn.addEventListener('touchend', setChartType, { passive: false });
-    });
-
-    document.querySelectorAll('.chart-view-btn').forEach((btn) => {
-      const setChartView = (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.chart-view-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.chartView = btn.dataset.chartView || 'category';
-        renderChartsDashboard();
-      };
-      btn.addEventListener('click', setChartView);
-      btn.addEventListener('touchend', setChartView, { passive: false });
     });
 
     window.addEventListener('pagehide', saveCurrentActiveTask);

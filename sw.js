@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v22-chart-analytics';
+const CACHE_NAME = 'lifeos-pwa-v23-pie-analytics';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -19,11 +19,14 @@ const PRECACHE = [
   './style.css?v=20260529-locked-brand',
   './style.css?v=20260529-compact-brand',
   './style.css?v=20260529-official-logo',
+  './style.css?v=20260602-pie-analytics',
   './script.js',
   './script.js?v=20260529-key-context',
   './script.js?v=20260530-chart-analytics',
+  './script.js?v=20260602-pie-analytics',
   './charts.js',
   './charts.js?v=20260530-chart-analytics',
+  './charts.js?v=20260602-pie-analytics',
   './manifest.json',
   './offline.html',
   './favicon.ico',
