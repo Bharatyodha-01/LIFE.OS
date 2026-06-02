@@ -1686,14 +1686,14 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 /* Charts */
 .modal-wide,
 .charts-modal {
-  width: min(1480px, calc(100vw - 28px));
-  max-width: min(1480px, calc(100vw - 28px));
+  width: min(1560px, calc(100vw - 24px));
+  max-width: min(1560px, calc(100vw - 24px));
   height: calc(100vh - 24px);
   max-height: calc(100vh - 24px);
 }
 
 .charts-modal .modal-header {
-  padding: 12px 20px;
+  padding: 12px 22px;
 }
 
 .charts-modal .modal-header h2 {
@@ -1703,21 +1703,30 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 }
 
 .charts-modal .modal-body {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 12px 20px 18px;
+  padding: 12px 22px 18px;
+}
+
+#chartsContainer {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .chart-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .chart-range-btn {
-  min-height: 46px;
-  padding: 10px 14px;
+  min-height: 42px;
+  padding: 9px 14px;
   background: #0f1419;
   border: 1px solid var(--border);
   color: var(--text);
@@ -1755,7 +1764,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   justify-content: space-between;
   gap: 14px;
   margin: 0 0 10px;
-  padding: 6px 0 8px;
+  padding: 4px 0 8px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   font-family: var(--font-display);
@@ -1777,9 +1786,10 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 
 .charts-hub-layout {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 0.95fr);
-  gap: 14px;
-  height: calc(100vh - 178px);
+  flex: 1;
+  grid-template-rows: minmax(330px, 1.08fr) minmax(260px, 0.92fr);
+  gap: 12px;
+  height: auto;
   min-height: 0;
 }
 
@@ -1789,28 +1799,30 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #0b1016;
+  background: linear-gradient(180deg, #0d131a 0%, #080c11 100%);
+  box-shadow: inset 0 0 0 1px #ffffff05;
 }
 
 .charts-top-grid {
   display: grid;
-  grid-template-columns: minmax(520px, 0.72fr) minmax(320px, 0.28fr);
-  gap: 14px;
+  grid-template-columns: minmax(680px, 1.55fr) minmax(360px, 0.85fr);
+  gap: 12px;
   min-height: 0;
 }
 
 .chart-overview-card {
-  width: min(620px, 100%);
+  width: 100%;
   justify-self: start;
   border-color: #ffffff24;
-  padding: 14px 18px;
+  padding: 14px 18px 16px;
 }
 
 .chart-top-panel {
   border-color: #ffffff24;
+  padding: 14px 16px 16px;
 }
 
 .chart-card-productive { border-top: 2px solid var(--productive); }
@@ -1821,14 +1833,14 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .chart-card-head h3 {
   color: #fff;
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   letter-spacing: 0.08em;
   line-height: 1.3;
   text-transform: uppercase;
@@ -1848,7 +1860,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 
 .chart-overview-head h3 {
   color: var(--accent);
-  font-size: 0.9rem;
+  font-size: 1rem;
   text-shadow: var(--glow-green);
 }
 
@@ -1879,8 +1891,8 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 }
 
 .chart-overview-body {
-  grid-template-columns: minmax(230px, 0.85fr) minmax(250px, 0.8fr);
-  gap: 18px;
+  grid-template-columns: minmax(460px, 1.25fr) minmax(270px, 0.75fr);
+  gap: 24px;
 }
 
 .charts-category-row {
@@ -1891,26 +1903,28 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 }
 
 .chart-card-body {
-  grid-template-columns: minmax(140px, 0.55fr) minmax(190px, 0.95fr);
-  gap: 14px;
+  grid-template-columns: minmax(210px, 0.86fr) minmax(220px, 1fr);
+  gap: 16px;
 }
 
 .chart-card-body-summary {
-  grid-template-columns: minmax(140px, 0.65fr) minmax(200px, 1fr);
+  grid-template-columns: minmax(210px, 0.9fr) minmax(220px, 1fr);
 }
 
 .chart-pie-canvas {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 168px;
+  min-height: 220px;
+  place-self: center;
 }
 
 .chart-overview-canvas {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 224px;
+  min-height: 330px;
+  place-self: center;
 }
 
 .chart-summary-stat {
@@ -1919,7 +1933,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   justify-content: space-between;
   gap: 8px;
   min-height: auto;
-  padding-bottom: 8px;
+  padding: 0 0 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   text-align: left;
@@ -1928,7 +1942,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-summary-stat strong {
   color: var(--accent);
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.72rem;
 }
 
 .chart-summary-stat span {
@@ -1940,8 +1954,10 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-legend {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  justify-content: center;
+  gap: 8px;
   min-width: 0;
+  height: 100%;
 }
 
 .chart-legend-item {
@@ -1949,7 +1965,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
-  padding: 5px 0;
+  padding: 7px 0;
   border-bottom: 1px solid #1a2a3a99;
   color: #fff;
   font-size: 0.9rem;
@@ -2008,22 +2024,22 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-card-top {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   min-height: 0;
 }
 
 .chart-top-list {
   flex: 1;
-  justify-content: center;
+  justify-content: space-evenly;
 }
 
 .chart-top-row {
   display: grid;
-  grid-template-columns: 34px 14px minmax(0, 1fr) auto auto;
+  grid-template-columns: 38px 14px minmax(0, 1fr) minmax(62px, auto) minmax(48px, auto);
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 7px 0;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 0;
   border-bottom: 1px solid #1a2a3a99;
   color: #fff;
   font-size: 0.9rem;
@@ -2036,7 +2052,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-top-rank {
   color: var(--blue);
   font-family: var(--font-display);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 900;
 }
 
@@ -2056,20 +2072,24 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 
 .chart-top-row strong {
   color: #fff;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+  text-align: right;
 }
 
 .chart-top-row em {
   color: var(--accent);
-  font-size: 0.9rem;
+  font-size: 0.94rem;
+  text-align: right;
 }
 
 .chart-category-detail {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 12px;
+  justify-content: center;
   min-width: 0;
   min-height: 0;
+  height: 100%;
 }
 
 .chart-card-top {
@@ -2081,15 +2101,15 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
   font-family: var(--font-display);
   font-size: 0.74rem;
   letter-spacing: 0.08em;
-  margin: 0;
+  margin: 0 0 2px;
   text-transform: uppercase;
 }
 
 .chart-card-top .chart-top-row {
-  grid-template-columns: 14px minmax(0, 1fr) auto auto;
-  min-height: 30px;
-  padding: 4px 0;
-  font-size: 0.78rem;
+  grid-template-columns: 14px minmax(0, 1fr) minmax(52px, auto) minmax(42px, auto);
+  min-height: 34px;
+  padding: 5px 0;
+  font-size: 0.82rem;
 }
 
 .chart-card-top .chart-top-rank {
@@ -2107,7 +2127,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 .chart-detail-overlay {
   position: fixed;
   inset: 0;
-  z-index: 450;
+  z-index: 650;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2279,7 +2299,7 @@ body.fullscreen .dashboard { height: calc(100vh - 54px - var(--feedback-height))
 }
 
 .chart-tree-child span::before {
-  content: "├ ";
+  content: "+ ";
   color: var(--blue);
 }
 
@@ -2589,6 +2609,10 @@ body.pwa-standalone .header {
     overflow-y: auto;
   }
 
+  #chartsContainer {
+    flex: none;
+  }
+
   .chart-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -2611,6 +2635,7 @@ body.pwa-standalone .header {
   .charts-hub-layout {
     height: auto;
     grid-template-rows: none;
+    gap: 12px;
   }
 
   .chart-overview-card {
@@ -2628,33 +2653,43 @@ body.pwa-standalone .header {
   }
 
   .chart-card {
-    min-height: 380px;
+    min-height: 0;
   }
 
   .chart-card-body {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 14px;
   }
 
   .chart-pie-canvas,
   .chart-overview-canvas {
-    min-height: 220px;
+    min-height: min(330px, calc(100vw - 56px));
   }
 
   .chart-summary-stat {
-    min-height: 82px;
+    min-height: 0;
     border-bottom: 1px solid var(--border);
-    padding-top: 10px;
+    padding: 0 0 10px;
   }
 
   .chart-legend-item {
-    grid-template-columns: 16px minmax(0, 1fr);
+    grid-template-columns: 16px minmax(0, 1fr) auto;
     gap: 10px;
   }
 
   .chart-legend-item strong {
-    grid-column: 2;
-    white-space: normal;
+    grid-column: auto;
+    white-space: nowrap;
+  }
+
+  .chart-top-row,
+  .chart-card-top .chart-top-row {
+    grid-template-columns: 30px 14px minmax(0, 1fr) minmax(56px, auto) minmax(42px, auto);
+    gap: 7px;
+  }
+
+  .chart-card-top .chart-top-rank {
+    display: inline;
   }
 
   .chart-detail-grid {

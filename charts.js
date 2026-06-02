@@ -166,9 +166,88 @@
   function canvasSize(canvas, fallbackWidth, fallbackHeight) {
     const rect = canvas.getBoundingClientRect();
     return {
-      width: Math.max(220, Math.floor(rect.width || fallbackWidth)),
-      height: Math.max(180, Math.floor(rect.height || fallbackHeight))
+      width: Math.max(240, Math.floor(rect.width || fallbackWidth)),
+      height: Math.max(220, Math.floor(rect.height || fallbackHeight))
     };
+  }
+
+  function fitText(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let compact = text;
+    while (compact.length > 4 && ctx.measureText(compact + '...').width > maxWidth) {
+      compact = compact.slice(0, -1);
+    }
+    return compact.length > 4 ? compact + '...' : text.slice(0, 4);
+  }
+
+  function drawSliceLabels(ctx, slices, total, centerX, centerY, radius, options) {
+    const labels = [];
+    let start = -Math.PI / 2;
+    slices.forEach((slice) => {
+      const angle = (slice.value / total) * Math.PI * 2;
+      const mid = start + angle / 2;
+      const side = Math.cos(mid) >= 0 ? 1 : -1;
+      labels.push({
+        slice,
+        pct: Math.round((slice.value / total) * 100),
+        angle: mid,
+        side,
+        x: centerX + Math.cos(mid) * (radius + 12),
+        y: centerY + Math.sin(mid) * (radius + 12),
+        lineX: centerX + Math.cos(mid) * radius,
+        lineY: centerY + Math.sin(mid) * radius
+      });
+      start += angle;
+    });
+
+    [-1, 1].forEach((side) => {
+      const sideLabels = labels.filter((label) => label.side === side).sort((a, b) => a.y - b.y);
+      const gap = options.overview ? 30 : 24;
+      const top = centerY - radius - 8;
+      const bottom = centerY + radius + 8;
+      sideLabels.forEach((label, index) => {
+        if (index > 0 && label.y < sideLabels[index - 1].y + gap) {
+          label.y = sideLabels[index - 1].y + gap;
+        }
+      });
+      for (let index = sideLabels.length - 1; index >= 0; index--) {
+        if (sideLabels[index].y > bottom) sideLabels[index].y = bottom;
+        if (index > 0 && sideLabels[index - 1].y > sideLabels[index].y - gap) {
+          sideLabels[index - 1].y = sideLabels[index].y - gap;
+        }
+      }
+      sideLabels.forEach((label) => {
+        if (label.y < top) label.y = top;
+      });
+    });
+
+    const fontSize = options.overview ? 13 : 11;
+    ctx.font = `800 ${fontSize}px Share Tech Mono, monospace`;
+    ctx.textBaseline = 'middle';
+    labels.forEach((label) => {
+      const outerOffset = options.overview ? 72 : 54;
+      const safeEdge = options.overview ? 92 : 72;
+      const naturalEndX = centerX + label.side * (radius + outerOffset);
+      const endX = label.side === 1
+        ? Math.min(naturalEndX, options.width - safeEdge)
+        : Math.max(naturalEndX, safeEdge);
+      const kneeX = centerX + label.side * Math.max(radius + 16, Math.abs(endX - centerX) - 18);
+      const textX = endX + label.side * 7;
+      const maxText = options.overview ? 96 : 70;
+      const text = `${fitText(ctx, label.slice.label, maxText)} ${label.pct}%`;
+
+      ctx.beginPath();
+      ctx.moveTo(label.lineX, label.lineY);
+      ctx.lineTo(kneeX, label.y);
+      ctx.lineTo(endX, label.y);
+      ctx.strokeStyle = label.slice.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = label.side === 1 ? 'left' : 'right';
+      ctx.fillText(text, textX, label.y);
+    });
   }
 
   function drawEmpty(canvas, message, large) {
@@ -194,9 +273,13 @@
     if (!ctx) return;
 
     const total = sum(active);
+    const maxLabelSpace = overview ? 118 : 84;
+    const labelSpace = options.showLabels
+      ? Math.min(maxLabelSpace, Math.max(58, (size.width - 210) / 2))
+      : 0;
     const cx = size.width / 2;
     const cy = size.height / 2 + 3;
-    const radius = Math.min(size.width * 0.28, size.height * 0.36, large ? 205 : overview ? 95 : 76);
+    const radius = Math.max(64, Math.min((size.width - labelSpace * 2) / 2, size.height / 2, large ? 230 : overview ? 176 : 112) - 8);
     let start = -Math.PI / 2;
 
     active.forEach((slice) => {
@@ -213,6 +296,10 @@
       start += angle;
     });
 
+    if (options.showLabels) {
+      drawSliceLabels(ctx, active, total, cx, cy, radius, { overview, width: size.width });
+    }
+
     ctx.beginPath();
     ctx.arc(cx, cy, radius * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = '#0a0e14';
@@ -224,11 +311,12 @@
     const centerPct = typeof options.centerPct === 'number'
       ? options.centerPct
       : Math.round((active[0].value / total) * 100);
+    const centerValue = options.centerText || (centerPct + '%');
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${large ? 48 : overview ? 39 : 28}px Orbitron, sans-serif`;
-    ctx.fillText(centerPct + '%', cx, cy - (large ? 10 : 5));
+    ctx.font = `900 ${large ? 48 : overview ? 34 : 30}px Orbitron, sans-serif`;
+    ctx.fillText(centerValue, cx, cy - (large ? 10 : 5));
     ctx.fillStyle = options.centerColor || active[0].color;
     ctx.font = `700 ${large ? 21 : overview ? 16 : 13}px Share Tech Mono, monospace`;
     ctx.fillText((options.centerLabel || active[0].label).slice(0, large ? 26 : 18), cx, cy + (large ? 30 : overview ? 24 : 18));
@@ -491,7 +579,13 @@
 
     bindDetailControls(container);
     requestAnimationFrame(() => {
-      drawPie(container.querySelector('#chartOverall'), breakdown.categories, { overview: true, emptyMessage: 'No data in this range' });
+      drawPie(container.querySelector('#chartOverall'), breakdown.categories, {
+        overview: true,
+        showLabels: true,
+        centerText: 'Total',
+        centerLabel: formatMs(total),
+        emptyMessage: 'No data in this range'
+      });
       drawPie(container.querySelector('#chartProductive'), breakdown.topByCategory.productive, {
         centerPct: total ? Math.round((productiveTotal / total) * 100) : 0,
         centerLabel: 'Productive',

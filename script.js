@@ -403,7 +403,9 @@
 
   function renderChartsIfOpen() {
     const modal = document.getElementById('chartsModal');
-    if (modal && !modal.classList.contains('hidden')) renderChartsDashboard();
+    const detailOverlay = document.getElementById('chartDetailOverlay');
+    const detailOpen = detailOverlay && !detailOverlay.classList.contains('hidden');
+    if (modal && !modal.classList.contains('hidden') && !detailOpen) renderChartsDashboard();
   }
 
   /** Open charts modal (mobile-safe) and render after visible */
