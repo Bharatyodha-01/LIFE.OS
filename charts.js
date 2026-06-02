@@ -225,15 +225,15 @@
     ctx.font = `800 ${fontSize}px Share Tech Mono, monospace`;
     ctx.textBaseline = 'middle';
     labels.forEach((label) => {
-      const outerOffset = options.overview ? 72 : 54;
-      const safeEdge = options.overview ? 92 : 72;
+      const outerOffset = options.overview ? 58 : 46;
+      const safeEdge = options.overview ? 16 : 12;
       const naturalEndX = centerX + label.side * (radius + outerOffset);
       const endX = label.side === 1
         ? Math.min(naturalEndX, options.width - safeEdge)
         : Math.max(naturalEndX, safeEdge);
       const kneeX = centerX + label.side * Math.max(radius + 16, Math.abs(endX - centerX) - 18);
-      const textX = endX + label.side * 7;
-      const maxText = options.overview ? 96 : 70;
+      const textX = label.side === 1 ? endX + 7 : safeEdge;
+      const maxText = options.overview ? 78 : 60;
       const text = `${fitText(ctx, label.slice.label, maxText)} ${label.pct}%`;
 
       ctx.beginPath();
@@ -245,7 +245,7 @@
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.textAlign = label.side === 1 ? 'left' : 'right';
+      ctx.textAlign = 'left';
       ctx.fillText(text, textX, label.y);
     });
   }
@@ -273,13 +273,13 @@
     if (!ctx) return;
 
     const total = sum(active);
-    const maxLabelSpace = overview ? 118 : 84;
+    const maxLabelSpace = overview ? 110 : 78;
     const labelSpace = options.showLabels
       ? Math.min(maxLabelSpace, Math.max(58, (size.width - 210) / 2))
       : 0;
     const cx = size.width / 2;
     const cy = size.height / 2 + 3;
-    const radius = Math.max(64, Math.min((size.width - labelSpace * 2) / 2, size.height / 2, large ? 230 : overview ? 176 : 112) - 8);
+    const radius = Math.max(58, Math.min((size.width - labelSpace * 2) / 2, size.height / 2, large ? 220 : overview ? 148 : 94) - 12);
     let start = -Math.PI / 2;
 
     active.forEach((slice) => {
@@ -315,10 +315,10 @@
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${large ? 48 : overview ? 34 : 30}px Orbitron, sans-serif`;
+    ctx.font = `900 ${large ? 48 : overview ? 32 : 28}px Orbitron, sans-serif`;
     ctx.fillText(centerValue, cx, cy - (large ? 10 : 5));
     ctx.fillStyle = options.centerColor || active[0].color;
-    ctx.font = `700 ${large ? 21 : overview ? 16 : 13}px Share Tech Mono, monospace`;
+    ctx.font = `700 ${large ? 21 : overview ? 15 : 12}px Share Tech Mono, monospace`;
     ctx.fillText((options.centerLabel || active[0].label).slice(0, large ? 26 : 18), cx, cy + (large ? 30 : overview ? 24 : 18));
   }
 
