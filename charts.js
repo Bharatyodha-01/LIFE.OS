@@ -1,5 +1,5 @@
 /**
- * LIFE OS - Full-screen pie analytics (vanilla JS)
+ * LIFE OS - Compact pie dashboard analytics (vanilla JS)
  */
 (function (global) {
   'use strict';
@@ -15,6 +15,9 @@
   const SUBTASK_PALETTE = ['#00b4ff', '#6fb0ff', '#1e7bff', '#36ffc0', '#9f8cff', '#ffaa00', '#4c9bff', '#b8ff7a'];
   const NEUTRAL_PALETTE = ['#00ff9d', '#36ffc0', '#7dffcf', '#00cc7d', '#b8ff7a', '#4ee8a7', '#94ffd8', '#18d68a'];
   const DISTRACTION_PALETTE = ['#ff3355', '#ff5f78', '#ff8296', '#d92040', '#ff1744', '#ff6b35', '#ff9a8a', '#c9184a'];
+  const TOP_PALETTE = ['#ffaa00', '#1e7bff', '#00ff9d', '#ff3355', '#00b4ff', '#9f8cff', '#36ffc0', '#ff8296'];
+
+  let currentCharts = [];
 
   function duration(entry) {
     return Math.max(0, Number(entry.durationMs) || 0);
@@ -46,6 +49,10 @@
     return 'neutral';
   }
 
+  function detailLabel(entry) {
+    return entry.sub ? `${entry.main} > ${entry.sub}` : entry.main || '--';
+  }
+
   function sum(items) {
     return items.reduce((total, item) => total + item.value, 0);
   }
@@ -56,14 +63,15 @@
     map.get(key).value += value;
   }
 
-  function toSlices(map, palette) {
-    return [...map.values()]
+  function toSlices(map, palette, limit) {
+    const slices = [...map.values()]
       .filter((item) => item.value > 0)
       .sort((a, b) => b.value - a.value)
       .map((item, index) => ({
         ...item,
         color: item.color || palette[index % palette.length]
       }));
+    return limit ? slices.slice(0, limit) : slices;
   }
 
   function buildBreakdowns(entries, getCategory) {
@@ -76,12 +84,15 @@
     const productiveSubtasks = new Map();
     const neutral = new Map();
     const distraction = new Map();
+    const topActivities = new Map();
 
     entries.forEach((entry) => {
       const d = duration(entry);
       if (!d) return;
       const cat = categoryKey(entry, getCategory);
       const taskLabel = entry.main || '--';
+
+      addToMap(topActivities, detailLabel(entry), d);
 
       if (cat === 'productive') {
         categories.get('Productive').value += d;
@@ -105,7 +116,8 @@
       productive: toSlices(productive, PRODUCTIVE_PALETTE),
       productiveSubtasks: toSlices(productiveSubtasks, SUBTASK_PALETTE),
       neutral: toSlices(neutral, NEUTRAL_PALETTE),
-      distraction: toSlices(distraction, DISTRACTION_PALETTE)
+      distraction: toSlices(distraction, DISTRACTION_PALETTE),
+      topActivities: toSlices(topActivities, TOP_PALETTE, 8)
     };
   }
 
@@ -122,32 +134,39 @@
     return ctx;
   }
 
-  function drawEmpty(canvas) {
-    const width = Math.max(320, Math.floor(canvas.getBoundingClientRect().width || 760));
-    const height = Math.max(360, Math.floor(canvas.getBoundingClientRect().height || 460));
-    const ctx = setupCanvas(canvas, width, height);
-    if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 22px Share Tech Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('No data in this range', width / 2, height / 2);
+  function canvasSize(canvas, fallbackWidth, fallbackHeight) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      width: Math.max(220, Math.floor(rect.width || fallbackWidth)),
+      height: Math.max(180, Math.floor(rect.height || fallbackHeight))
+    };
   }
 
-  function drawPie(canvas, slices) {
-    if (!canvas) return;
-    const active = slices.filter((slice) => slice.value > 0);
-    if (!active.length) return drawEmpty(canvas);
+  function drawEmpty(canvas, message, large) {
+    const size = canvasSize(canvas, large ? 720 : 280, large ? 520 : 190);
+    const ctx = setupCanvas(canvas, size.width, size.height);
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${large ? 24 : 15}px Share Tech Mono, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(message || 'No data in this range', size.width / 2, size.height / 2);
+  }
 
-    const width = Math.max(320, Math.floor(canvas.getBoundingClientRect().width || 760));
-    const height = Math.max(380, Math.floor(canvas.getBoundingClientRect().height || 520));
-    const ctx = setupCanvas(canvas, width, height);
+  function drawPie(canvas, slices, options = {}) {
+    if (!canvas) return;
+    const large = Boolean(options.large);
+    const active = slices.filter((slice) => slice.value > 0);
+    if (!active.length) return drawEmpty(canvas, options.emptyMessage, large);
+
+    const size = canvasSize(canvas, large ? 780 : 320, large ? 560 : 210);
+    const ctx = setupCanvas(canvas, size.width, size.height);
     if (!ctx) return;
 
     const total = sum(active);
-    const cx = width / 2;
-    const cy = height / 2 + 6;
-    const radius = Math.min(width * 0.27, height * 0.36, 190);
+    const cx = size.width / 2;
+    const cy = size.height / 2 + (large ? 8 : 3);
+    const radius = Math.min(size.width * 0.3, size.height * 0.39, large ? 210 : 82);
     let start = -Math.PI / 2;
 
     active.forEach((slice) => {
@@ -159,13 +178,13 @@
       ctx.fillStyle = slice.color;
       ctx.fill();
       ctx.strokeStyle = '#050608';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = large ? 4 : 2;
       ctx.stroke();
       start += angle;
     });
 
     ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.43, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius * 0.44, 0, Math.PI * 2);
     ctx.fillStyle = '#0a0e14';
     ctx.fill();
     ctx.strokeStyle = '#1a2a3a';
@@ -177,38 +196,103 @@
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '900 38px Orbitron, sans-serif';
-    ctx.fillText(pct + '%', cx, cy - 8);
+    ctx.font = `900 ${large ? 42 : 24}px Orbitron, sans-serif`;
+    ctx.fillText(pct + '%', cx, cy - (large ? 10 : 5));
     ctx.fillStyle = top.color;
-    ctx.font = '700 17px Share Tech Mono, monospace';
-    ctx.fillText(top.label.slice(0, 22), cx, cy + 28);
+    ctx.font = `700 ${large ? 18 : 11}px Share Tech Mono, monospace`;
+    ctx.fillText(top.label.slice(0, large ? 26 : 18), cx, cy + (large ? 30 : 18));
   }
 
-  function legendHTML(items, total) {
-    if (!items.length || total <= 0) return '<p class="chart-empty-text">No data in this range</p>';
-    return items.map((item) => {
+  function legendHTML(items, total, compact = true) {
+    if (!items.length || total <= 0) return '';
+    const visible = compact ? items.slice(0, 4) : items;
+    const hiddenCount = Math.max(0, items.length - visible.length);
+    return visible.map((item) => {
       const pct = Math.round((item.value / total) * 100);
       return `<div class="chart-legend-item">
         <span class="chart-dot" style="background:${item.color}"></span>
         <span class="chart-legend-label">${escapeHtml(item.label)}</span>
         <strong>${pct}% (${formatMs(item.value)})</strong>
       </div>`;
-    }).join('');
+    }).join('') + (hiddenCount ? `<div class="chart-legend-more">+${hiddenCount} more</div>` : '');
   }
 
-  function sectionHTML(id, title, items, total, tone, emptyMessage) {
-    const hasData = items.length && total > 0;
-    return `<section class="chart-section chart-section-${tone}">
-      <div class="chart-section-heading">
-        <h3>${escapeHtml(title)}</h3>
-        <span>${hasData ? formatMs(total) : '--'}</span>
+  function chartCardHTML(chart) {
+    const hasData = chart.items.length && chart.total > 0;
+    return `<section class="chart-card chart-card-${chart.tone}">
+      <div class="chart-card-head">
+        <div>
+          <h3>${escapeHtml(chart.title)}</h3>
+          <span>${hasData ? formatMs(chart.total) : '--'}</span>
+        </div>
+        <button class="chart-expand-btn" data-expand-chart="${chart.id}" type="button">View Large</button>
       </div>
       ${hasData ? `
-        <div class="chart-pie-layout">
-          <canvas id="${id}" class="chart-pie-canvas" aria-label="${escapeHtml(title)} pie chart"></canvas>
-          <div class="chart-legend">${legendHTML(items, total)}</div>
-        </div>` : `<p class="chart-empty-text">${escapeHtml(emptyMessage || 'No data in this range')}</p>`}
+        <div class="chart-card-body">
+          <canvas id="${chart.id}" class="chart-pie-canvas" aria-label="${escapeHtml(chart.title)} pie chart"></canvas>
+          <div class="chart-legend">${legendHTML(chart.items, chart.total, true)}</div>
+        </div>` : `<p class="chart-empty-text">${escapeHtml(chart.emptyMessage)}</p>`}
     </section>`;
+  }
+
+  function expandedOverlayHTML() {
+    return `<div class="chart-expand-overlay hidden" id="chartExpandOverlay" aria-hidden="true">
+      <div class="chart-expand-modal">
+        <div class="chart-expand-head">
+          <div>
+            <h3 id="chartExpandTitle">Chart</h3>
+            <span id="chartExpandTotal">--</span>
+          </div>
+          <button class="btn-close" id="chartExpandClose" type="button">&times;</button>
+        </div>
+        <div class="chart-expand-body">
+          <canvas id="chartExpandCanvas" class="chart-expand-canvas" aria-label="Expanded pie chart"></canvas>
+          <div class="chart-legend chart-expand-legend" id="chartExpandLegend"></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function openExpandedChart(container, chartId) {
+    const chart = currentCharts.find((item) => item.id === chartId);
+    if (!chart) return;
+
+    const overlay = container.querySelector('#chartExpandOverlay');
+    const title = container.querySelector('#chartExpandTitle');
+    const total = container.querySelector('#chartExpandTotal');
+    const legend = container.querySelector('#chartExpandLegend');
+    const canvas = container.querySelector('#chartExpandCanvas');
+    if (!overlay || !title || !total || !legend || !canvas) return;
+
+    title.textContent = chart.title;
+    total.textContent = chart.total > 0 ? `Total: ${formatMs(chart.total)}` : '--';
+    legend.innerHTML = chart.items.length ? legendHTML(chart.items, chart.total, false) : `<p class="chart-empty-text">${escapeHtml(chart.emptyMessage)}</p>`;
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => drawPie(canvas, chart.items, { large: true, emptyMessage: chart.emptyMessage }));
+  }
+
+  function closeExpandedChart(container) {
+    const overlay = container.querySelector('#chartExpandOverlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function bindExpandControls(container) {
+    container.querySelectorAll('[data-expand-chart]').forEach((button) => {
+      button.addEventListener('click', () => openExpandedChart(container, button.dataset.expandChart));
+    });
+
+    const close = container.querySelector('#chartExpandClose');
+    if (close) close.addEventListener('click', () => closeExpandedChart(container));
+
+    const overlay = container.querySelector('#chartExpandOverlay');
+    if (overlay) {
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closeExpandedChart(container);
+      });
+    }
   }
 
   function renderChartsPanel(container, entries, getCategory, options = {}) {
@@ -220,27 +304,33 @@
     const subtaskTotal = sum(breakdown.productiveSubtasks);
     const neutralTotal = sum(breakdown.neutral);
     const distractionTotal = sum(breakdown.distraction);
+    const topTotal = sum(breakdown.topActivities);
     const rangeLabel = { today: 'Today', yesterday: 'Yesterday', week: 'This Week', month: 'This Month' }[options.range] || 'Today';
+
+    currentCharts = [
+      { id: 'chartTimeDistribution', title: 'Time Distribution', tone: 'distribution', items: breakdown.categories, total, emptyMessage: 'No data in this range' },
+      { id: 'chartProductive', title: 'Productive Breakdown', tone: 'productive', items: breakdown.productive, total: productiveTotal, emptyMessage: 'No productive data in this range' },
+      { id: 'chartProductiveSubtasks', title: 'Productive Subtasks', tone: 'subtasks', items: breakdown.productiveSubtasks, total: subtaskTotal, emptyMessage: 'No sub-task data available.' },
+      { id: 'chartNeutral', title: 'Neutral Breakdown', tone: 'neutral', items: breakdown.neutral, total: neutralTotal, emptyMessage: 'No neutral data in this range' },
+      { id: 'chartDistraction', title: 'Distraction Breakdown', tone: 'distraction', items: breakdown.distraction, total: distractionTotal, emptyMessage: 'No distraction data in this range' },
+      { id: 'chartTopActivities', title: 'Top Activities', tone: 'top', items: breakdown.topActivities, total: topTotal, emptyMessage: 'No activity data in this range' }
+    ];
 
     container.innerHTML = `
       <div class="charts-period-title">
         <span>${escapeHtml(rangeLabel)}</span>
         <strong>Total Logged: ${formatMs(total)}</strong>
       </div>
-      <div class="charts-vertical">
-        ${sectionHTML('chartTimeDistribution', 'Time Distribution', breakdown.categories, total, 'distribution')}
-        ${sectionHTML('chartProductive', 'Productive Breakdown', breakdown.productive, productiveTotal, 'productive')}
-        ${sectionHTML('chartProductiveSubtasks', 'Productive Subtask Breakdown', breakdown.productiveSubtasks, subtaskTotal, 'subtasks', 'No sub-task data available for this period.')}
-        ${sectionHTML('chartNeutral', 'Neutral Breakdown', breakdown.neutral, neutralTotal, 'neutral')}
-        ${sectionHTML('chartDistraction', 'Distraction Breakdown', breakdown.distraction, distractionTotal, 'distraction')}
-      </div>`;
+      <div class="charts-dashboard-grid">
+        ${currentCharts.map(chartCardHTML).join('')}
+      </div>
+      ${expandedOverlayHTML()}`;
 
+    bindExpandControls(container);
     requestAnimationFrame(() => {
-      drawPie(container.querySelector('#chartTimeDistribution'), breakdown.categories);
-      drawPie(container.querySelector('#chartProductive'), breakdown.productive);
-      drawPie(container.querySelector('#chartProductiveSubtasks'), breakdown.productiveSubtasks);
-      drawPie(container.querySelector('#chartNeutral'), breakdown.neutral);
-      drawPie(container.querySelector('#chartDistraction'), breakdown.distraction);
+      currentCharts.forEach((chart) => {
+        drawPie(container.querySelector('#' + chart.id), chart.items, { emptyMessage: chart.emptyMessage });
+      });
     });
   }
 
