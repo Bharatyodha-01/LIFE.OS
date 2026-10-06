@@ -2775,10 +2775,21 @@ body.schedule-view .dashboard { display: block; height: calc(100vh - var(--heade
 body.schedule-view .dashboard > :not(.schedule-screen) { display: none !important; }
 body.schedule-view .dashboard > .schedule-screen { display: flex !important; height: 100%; }
 .schedule-intro { padding: 14px 18px 4px; color: #aab6c1; }
-.schedule-list { display: grid; gap: 10px; padding: 14px; overflow: auto; }
+.delivery-defaults { margin: 8px 14px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 5px; background: #0c1117; }
+.delivery-defaults summary { color: #c6d0d9; cursor: pointer; font-size: .8rem; }
+.delivery-default-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; align-items: end; padding-top: 12px; }
+.delivery-default-grid label,.schedule-delivery label { display: grid; gap: 5px; color: #b8c4ce; font-size: .73rem; }
+.delivery-default-grid select,.schedule-delivery select { min-height: 42px; padding: 7px 9px; border: 1px solid #294052; border-radius: 4px; background: #080d12; color: #fff; font: inherit; }
+.delivery-default-grid input[type=range],.schedule-delivery input[type=range] { width: 100%; accent-color: var(--accent); }
+.schedule-delivery { display: grid; gap: 11px; padding: 12px; border: 1px solid #294052; border-radius: 5px; }
+.schedule-delivery legend { padding: 0 6px; color: var(--accent); font-size: .76rem; }
+.schedule-delivery > label:last-of-type { grid-template-columns: 1fr auto; align-items: center; }
+.volume-value { color: var(--accent); font-size: .75rem; }
+.schedule-list { display: grid; flex: 1; min-height: 0; gap: 10px; padding: 14px; overflow: auto; }
 .schedule-card { display: grid; grid-template-columns: minmax(0,1fr) auto auto auto auto; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: linear-gradient(120deg,#101720,#0a0e14); }
 .schedule-card-title,.upcoming-name { color: #f4f7fa; font-family: var(--font-display); font-size: .9rem; letter-spacing: .04em; }
 .schedule-card-meta,.upcoming-meta { color: #9daab6; font-size: .8rem; }
+.schedule-delivery-label { margin-top: 3px; color: #70dcb4; font-size: .7rem; }
 .schedule-card-main p { margin-top: 5px; color: #84919e; font-size: .8rem; }
 .schedule-status { padding: 4px 8px; border: 1px solid #345; border-radius: 99px; color: #aab6c1; font-size: .68rem; white-space: nowrap; }
 .status-active-window { color: var(--accent); border-color: #00ff9d66; }
@@ -2822,6 +2833,9 @@ body.schedule-view .dashboard > .schedule-screen { display: flex !important; hei
   .schedule-toggle { justify-self: end; }
   .schedule-card > button { min-height: 42px; }
   .schedule-form { padding: 16px; }
+  .delivery-default-grid { grid-template-columns: 1fr 1fr; }
+  .delivery-default-grid > button { grid-column: 1 / -1; min-height: 44px; }
+  .schedule-delivery { padding: 10px; }
   .schedule-time-row { gap: 8px; }
   .schedule-time-row input { font-size: 1.05rem !important; }
   .reminder-card { padding: 22px; }

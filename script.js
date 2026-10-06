@@ -25,6 +25,10 @@
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
     soundEnabled: true,
+    reminderDelivery: 'notification',
+    reminderTone: 'gentle',
+    reminderVibration: 'medium',
+    reminderVolume: 55,
     timelineNewestFirst: true,
     showKeyOverlay: false,
     clockFormat: '24'
@@ -92,7 +96,7 @@
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
     isRestoringTask: false,
-    schedules: [], reminderQueue: [], reminderVisible: false, activeReminder: null
+    schedules: [], reminderQueue: [], reminderVisible: false, activeReminder: null, alarmTimers: [], vibrationTimer: null
   };
 
   function setupLaunchSplash() {
@@ -258,6 +262,7 @@
     state.reminderQueue = [];
     state.reminderVisible = false;
     state.activeReminder = null;
+    stopReminderDelivery();
     closeModal('reminderModal');
     saveCurrentActiveTask();
     cancelSubtaskWait();
@@ -295,6 +300,9 @@
   function scheduleTime(ts, dateOnly = false) {
     return new Intl.DateTimeFormat(undefined, dateOnly ? { weekday: 'short', month: 'short', day: 'numeric' } : { hour: 'numeric', minute: '2-digit' }).format(new Date(ts));
   }
+  function deliveryLabel(mode = 'notification') {
+    return ({ notification: 'Notification only', alarm: 'Alarm only', vibration: 'Vibration only', 'notification-alarm': 'Notification + alarm', 'notification-vibration': 'Notification + vibration', 'alarm-vibration': 'Alarm + vibration', all: 'Notification + alarm + vibration' })[mode] || 'Notification only';
+  }
   function renderSchedules() {
     const list = document.getElementById('scheduleList');
     const upcoming = document.getElementById('upcomingContent');
@@ -303,7 +311,7 @@
     const ordered = [...state.schedules].sort((a, b) => a.startTimestamp - b.startTimestamp);
     list.innerHTML = ordered.length ? ordered.map((item) => {
       const status = getScheduleStatus(item, now);
-      return `<article class="schedule-card"><div class="schedule-card-main"><div class="schedule-card-title">${escapeHtml(item.activityName)}</div><div class="schedule-card-meta">${scheduleTime(item.startTimestamp, true)} · ${scheduleTime(item.startTimestamp)}–${scheduleTime(item.endTimestamp)} · ${escapeHtml(item.category)}</div>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}</div><span class="schedule-status status-${status.toLowerCase().replaceAll(' ', '-')}">${status}</span><label class="schedule-toggle" title="Enable reminders"><input type="checkbox" data-schedule-toggle="${item.id}" ${item.enabled ? 'checked' : ''}><span>Enabled</span></label><button class="btn btn-sm" data-schedule-edit="${item.id}" type="button">Edit</button><button class="btn btn-sm btn-danger" data-schedule-delete="${item.id}" type="button">Delete</button></article>`;
+      return `<article class="schedule-card"><div class="schedule-card-main"><div class="schedule-card-title">${escapeHtml(item.activityName)}</div><div class="schedule-card-meta">${scheduleTime(item.startTimestamp, true)} · ${scheduleTime(item.startTimestamp)}–${scheduleTime(item.endTimestamp)} · ${escapeHtml(item.category)}</div><div class="schedule-delivery-label">${deliveryLabel(item.delivery || state.prefs.reminderDelivery)}</div>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}</div><span class="schedule-status status-${status.toLowerCase().replaceAll(' ', '-')}">${status}</span><label class="schedule-toggle" title="Enable reminders"><input type="checkbox" data-schedule-toggle="${item.id}" ${item.enabled ? 'checked' : ''}><span>Enabled</span></label><button class="btn btn-sm" data-schedule-edit="${item.id}" type="button">Edit</button><button class="btn btn-sm btn-danger" data-schedule-delete="${item.id}" type="button">Delete</button></article>`;
     }).join('') : '<div class="schedule-empty">No plans yet. Add a schedule to make space for what matters.</div>';
     const next = ordered.find((item) => item.enabled && item.endTimestamp > now);
     upcoming.innerHTML = next ? `<div class="upcoming-name">${escapeHtml(next.activityName)}</div><div class="upcoming-meta">${scheduleTime(next.startTimestamp, true)} · ${scheduleTime(next.startTimestamp)}${now < next.startTimestamp ? ` · ${formatRemaining(next.startTimestamp - now)}` : ' · In progress'}</div><button class="btn btn-primary btn-sm" type="button" data-schedule-start="${next.id}">Start activity</button>` : '<div class="upcoming-empty">Nothing scheduled next.</div>';
@@ -327,6 +335,11 @@
     const endDate = item ? new Date(item.endTimestamp) : null;
     document.getElementById('scheduleEnd').value = item ? `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}` : '10:00';
     document.getElementById('scheduleDescription').value = item?.description || '';
+    document.getElementById('scheduleDelivery').value = item?.delivery || state.prefs.reminderDelivery || 'notification';
+    document.getElementById('scheduleTone').value = item?.tone || state.prefs.reminderTone || 'gentle';
+    document.getElementById('scheduleVibration').value = item?.vibration || state.prefs.reminderVibration || 'medium';
+    document.getElementById('scheduleVolume').value = item?.volume ?? state.prefs.reminderVolume ?? 55;
+    document.getElementById('scheduleVolumeValue').textContent = `${document.getElementById('scheduleVolume').value}%`;
     document.getElementById('scheduleEnabled').checked = item ? !!item.enabled : true;
     openModal('scheduleEditorModal');
   }
@@ -338,7 +351,7 @@
     if (!Number.isFinite(start) || !Number.isFinite(end)) { showToast('Choose a valid date and time', 'error'); return; }
     if (end <= start) { showToast('End time must be after start time', 'error'); return; }
     const previous = state.schedules.find((item) => item.id === id);
-    const item = { id: id || (crypto.randomUUID ? crypto.randomUUID() : `schedule-${Date.now()}-${Math.random()}`), activityName: document.getElementById('scheduleName').value.trim(), category: document.getElementById('scheduleCategory').value, startTimestamp: start, endTimestamp: end, enabled: document.getElementById('scheduleEnabled').checked, description: document.getElementById('scheduleDescription').value.trim(), createdAt: previous?.createdAt || Date.now(), updatedAt: Date.now() };
+    const item = { id: id || (crypto.randomUUID ? crypto.randomUUID() : `schedule-${Date.now()}-${Math.random()}`), activityName: document.getElementById('scheduleName').value.trim(), category: document.getElementById('scheduleCategory').value, startTimestamp: start, endTimestamp: end, enabled: document.getElementById('scheduleEnabled').checked, description: document.getElementById('scheduleDescription').value.trim(), delivery: document.getElementById('scheduleDelivery').value, tone: document.getElementById('scheduleTone').value, vibration: document.getElementById('scheduleVibration').value, volume: Number(document.getElementById('scheduleVolume').value), createdAt: previous?.createdAt || Date.now(), updatedAt: Math.max(Date.now(), Number(previous?.updatedAt || 0) + 1) };
     if (!item.activityName) { showToast('Enter an activity name', 'error'); return; }
     state.schedules = previous ? state.schedules.map((schedule) => schedule.id === id ? item : schedule) : [...state.schedules, item];
     // A changed schedule gets fresh delivery markers; deleted/disabled plans cannot leave old reminders pending.
@@ -359,7 +372,7 @@
   function cancelScheduleReminders(id) {
     state.reminderQueue = state.reminderQueue.filter((reminder) => reminder.item.id !== id);
     if (state.activeReminder?.item.id === id) {
-      closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null; showNextReminder();
+      stopReminderDelivery(); closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null; showNextReminder();
     }
   }
   function checkScheduleReminders() {
@@ -388,13 +401,21 @@
     const start = kind === 'start';
     document.getElementById('reminderKicker').textContent = start ? 'START REMINDER' : 'END REMINDER';
     document.getElementById('reminderTitle').textContent = start ? `Time to start: ${item.activityName}` : `${item.activityName} has reached its scheduled end time`;
-    document.getElementById('reminderMessage').textContent = start ? `${scheduleTime(item.startTimestamp)} · Your planned session is ready when you are.` : 'Your planned session has ended. Choose what happens next.';
-    const actions = start ? [['Start activity', 'start'], ['Snooze 5 min', 'snooze'], ['Dismiss', 'dismiss']] : [['Stop current activity', 'stop'], ['Continue', 'continue'], ['Log activity', 'log'], ['Dismiss', 'dismiss']];
+    document.getElementById('reminderMessage').textContent = `${scheduleTime(item.startTimestamp)}–${scheduleTime(item.endTimestamp)} · ${start ? 'Your planned session is ready when you are.' : 'Your planned session has ended. Choose what happens next.'}`;
+    const actions = start ? [['Start activity', 'start'], ['Snooze 5 min', 'snooze'], ['Dismiss', 'dismiss']] : [['Stop current activity', 'stop'], ['Continue', 'continue'], ['Log activity', 'log'], ['Snooze 5 min', 'snooze'], ['Dismiss', 'dismiss']];
+    actions.push(['Open Schedule', 'open-schedule'], ['Mission Control', 'open-mission']);
     document.getElementById('reminderActions').innerHTML = actions.map(([label, action]) => `<button class="btn ${action === 'start' || action === 'stop' ? 'btn-primary' : ''}" type="button" data-reminder-action="${action}" data-reminder-id="${item.id}" data-reminder-name="${escapeHtml(item.activityName)}">${label}</button>`).join('');
     openModal('reminderModal');
-    if (document.visibilityState === 'hidden' && 'Notification' in window && Notification.permission === 'granted') new Notification(start ? `Time to start: ${item.activityName}` : `${item.activityName} session ended`, { body: 'Open LIFE-OS to choose an action.', tag: `${item.id}-${kind}-${item.updatedAt}` });
+    deliverReminder(item, kind);
   }
   function handleReminderAction(action, id, name) {
+    if (action === 'open-schedule' || action === 'open-mission') {
+      stopReminderDelivery(); closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null;
+      document.querySelector(`[data-screen="${action === 'open-schedule' ? 'schedule' : 'mission'}"]`)?.click(); showNextReminder(); return;
+    }
+    const reminderKind = state.activeReminder?.kind || 'start';
+    const reminderVersion = state.activeReminder?.item.updatedAt;
+    stopReminderDelivery();
     closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null;
     if (action === 'start') {
       const key = Object.keys(state.mappings.mainTasks).find((candidate) => state.mappings.mainTasks[candidate].toLowerCase() === name.toLowerCase()) || null;
@@ -409,9 +430,86 @@
         showToast(`Logged planned session: ${planned.activityName}`);
       }
     } else if (action === 'snooze') {
-      setTimeout(() => { const item = state.schedules.find((schedule) => schedule.id === id); if (!item || !item.enabled) return; state.reminderQueue.push({ item, kind: 'start', snoozed: true }); showNextReminder(); }, 5 * 60 * 1000);
+      setTimeout(() => { const item = state.schedules.find((schedule) => schedule.id === id); if (!item || !item.enabled || item.updatedAt !== reminderVersion) return; state.reminderQueue.push({ item, kind: reminderKind, snoozed: true }); showNextReminder(); }, 5 * 60 * 1000);
     }
     showNextReminder();
+  }
+
+  const ALARM_TONES = {
+    gentle: { notes: [660, 880], gap: 210 },
+    chime: { notes: [880, 1175, 988], gap: 180 },
+    pulse: { notes: [520, 520, 780], gap: 140 }
+  };
+  const VIBRATION_PATTERNS = { short: [130], medium: [320], long: [650], repeated: [180, 130, 180, 130, 280] };
+  function stopReminderDelivery() {
+    state.alarmTimers.forEach((timer) => clearInterval(timer)); state.alarmTimers = [];
+    if (state.vibrationTimer) clearInterval(state.vibrationTimer);
+    state.vibrationTimer = null;
+    try { if (navigator.vibrate) navigator.vibrate(0); } catch (_) { /* unsupported device */ }
+  }
+  function playAlarmBurst(toneName, volume) {
+    if (!audioCtx || volume <= 0) return;
+    try {
+      const tone = ALARM_TONES[toneName] || ALARM_TONES.gentle;
+      const now = audioCtx.currentTime;
+      tone.notes.forEach((frequency, index) => {
+        const oscillator = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        oscillator.type = 'sine'; oscillator.frequency.value = frequency;
+        const start = now + (tone.gap * index) / 1000; const end = start + 0.16;
+        gain.gain.setValueAtTime(Math.max(0.005, Math.min(100, volume) / 100 * 0.17), start);
+        gain.gain.exponentialRampToValueAtTime(0.001, end);
+        oscillator.connect(gain); gain.connect(audioCtx.destination); oscillator.start(start); oscillator.stop(end);
+      });
+    } catch (error) { console.warn('Alarm audio unavailable:', error); }
+  }
+  function previewAlarm(toneName, volume) {
+    if (!audioCtx) { showToast('Audio is unavailable in this browser', 'error'); return; }
+    try { audioCtx.resume().then(() => playAlarmBurst(toneName, volume)).catch(() => showToast('Tap to preview when audio is allowed', 'error')); }
+    catch (_) { showToast('Audio preview is unavailable', 'error'); }
+  }
+  function sendSystemReminder(title, item, kind) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const options = { body: 'Open LIFE-OS to choose an action.', tag: `${item.id}-${kind}-${item.updatedAt}`, silent: true };
+    const fallback = () => {
+      try {
+        const notice = new Notification(title, options);
+        notice.onclick = () => { window.focus(); notice.close(); };
+      } catch (error) { console.warn('System notification unavailable:', error); }
+    };
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if (registration.showNotification) return registration.showNotification(title, options);
+        fallback();
+      }).catch(fallback);
+    } else fallback();
+  }
+  function deliverReminder(item, kind) {
+    const delivery = item.delivery || state.prefs.reminderDelivery || 'notification';
+    const wantsNotification = delivery === 'notification' || delivery.startsWith('notification-') || delivery === 'all';
+    const wantsAlarm = delivery === 'alarm' || delivery.includes('alarm') || delivery === 'all';
+    const wantsVibration = delivery === 'vibration' || delivery.includes('vibration') || delivery === 'all';
+    if (wantsNotification && 'Notification' in window && Notification.permission === 'granted') {
+      sendSystemReminder(kind === 'start' ? `Time to start: ${item.activityName}` : `${item.activityName} session ended`, item, kind);
+    } else if (wantsNotification && 'Notification' in window && Notification.permission === 'denied') {
+      showToast('System notifications are blocked; in-app reminder shown', 'error');
+    }
+    if (wantsAlarm) {
+      if (!audioCtx) showToast('Alarm audio is unavailable; reminder remains on screen', 'error');
+      else {
+        try { audioCtx.resume().then(() => { if (state.activeReminder?.item.id !== item.id || state.activeReminder?.kind !== kind) return; playAlarmBurst(item.tone || state.prefs.reminderTone, item.volume ?? state.prefs.reminderVolume ?? 55); state.alarmTimers.push(setInterval(() => playAlarmBurst(item.tone || state.prefs.reminderTone, item.volume ?? state.prefs.reminderVolume ?? 55), 2200)); }).catch(() => showToast('Audio blocked by browser; reminder remains on screen', 'error')); }
+        catch (_) { showToast('Audio blocked by browser; reminder remains on screen', 'error'); }
+      }
+    }
+    if (wantsVibration) {
+      if (typeof navigator.vibrate !== 'function') showToast('Vibration is unavailable on this device', 'error');
+      else {
+        const pattern = VIBRATION_PATTERNS[item.vibration || state.prefs.reminderVibration] || VIBRATION_PATTERNS.medium;
+        try {
+          if (navigator.vibrate(pattern) === false) { showToast('Vibration is unavailable on this device', 'error'); return; }
+          if ((item.vibration || state.prefs.reminderVibration) === 'repeated') state.vibrationTimer = setInterval(() => { try { navigator.vibrate(pattern); } catch (_) { clearInterval(state.vibrationTimer); } }, 1500);
+        } catch (_) { showToast('Vibration is unavailable on this device', 'error'); }
+      }
+    }
   }
 
   function getActiveUserName() {
@@ -508,6 +606,7 @@
     state.reminderQueue = [];
     state.reminderVisible = false;
     state.activeReminder = null;
+    stopReminderDelivery();
     closeModal('reminderModal');
     state.currentTask = null;
     cancelSubtaskWait();
@@ -662,6 +761,22 @@
     }
     state.soundEnabled = state.prefs.soundEnabled !== false;
     applyPreferencesToUI();
+    applyDeliveryDefaultsToUI();
+  }
+  function applyDeliveryDefaultsToUI() {
+    const delivery = document.getElementById('defaultDelivery'); if (!delivery) return;
+    delivery.value = state.prefs.reminderDelivery || DEFAULT_PREFS.reminderDelivery;
+    document.getElementById('defaultTone').value = state.prefs.reminderTone || DEFAULT_PREFS.reminderTone;
+    document.getElementById('defaultVibration').value = state.prefs.reminderVibration || DEFAULT_PREFS.reminderVibration;
+    document.getElementById('defaultVolume').value = state.prefs.reminderVolume ?? DEFAULT_PREFS.reminderVolume;
+  }
+  function saveDeliveryDefaults() {
+    state.prefs.reminderDelivery = document.getElementById('defaultDelivery').value;
+    state.prefs.reminderTone = document.getElementById('defaultTone').value;
+    state.prefs.reminderVibration = document.getElementById('defaultVibration').value;
+    state.prefs.reminderVolume = Number(document.getElementById('defaultVolume').value);
+    localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
+    showToast('Defaults saved for new schedules');
   }
 
   function savePreferences() {
@@ -991,7 +1106,11 @@
   }
 
   // ─── Sound Effects (Web Audio API) ───────────────────────────
-  const audioCtx = typeof AudioContext !== 'undefined' ? new (window.AudioContext || window.webkitAudioContext)() : null;
+  let audioCtx = null;
+  try {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextCtor) audioCtx = new AudioContextCtor();
+  } catch (error) { console.warn('Web Audio unavailable:', error); }
 
   function playTone(freq, duration = 0.08, type = 'sine') {
     if (!state.soundEnabled || !audioCtx) return;
@@ -2138,15 +2257,18 @@
   }
 
   function bindEventsCore() {
+    document.addEventListener('pointerdown', () => { if (audioCtx?.state === 'suspended') audioCtx.resume().catch(() => {}); }, { passive: true });
     const alertButton = document.getElementById('btnEnableNotifications');
     if (!('Notification' in window)) alertButton.textContent = 'In-app alerts';
     else if (Notification.permission === 'granted') alertButton.textContent = 'System alerts on';
     alertButton.addEventListener('click', async () => {
       if (!('Notification' in window)) { showToast('This browser supports in-app reminders only', 'error'); return; }
       if (Notification.permission === 'granted') { showToast('System alerts are enabled'); return; }
-      const permission = await Notification.requestPermission();
-      alertButton.textContent = permission === 'granted' ? 'System alerts on' : 'Alerts blocked';
-      showToast(permission === 'granted' ? 'System alerts enabled' : 'Allow notifications in browser settings', permission === 'granted' ? 'success' : 'error');
+      try {
+        const permission = await Notification.requestPermission();
+        alertButton.textContent = permission === 'granted' ? 'System alerts on' : 'Alerts blocked';
+        showToast(permission === 'granted' ? 'System alerts enabled' : 'Allow notifications in browser settings', permission === 'granted' ? 'success' : 'error');
+      } catch (_) { alertButton.textContent = 'In-app alerts'; showToast('System notifications are unavailable; in-app alerts still work', 'error'); }
     });
     document.querySelectorAll('.screen-nav-btn').forEach((button) => button.addEventListener('click', () => {
       const isSchedule = button.dataset.screen === 'schedule';
@@ -2157,6 +2279,9 @@
     document.getElementById('btnSchedule').addEventListener('click', () => document.querySelector('[data-screen="schedule"]').click());
     document.getElementById('btnOpenSchedule').addEventListener('click', () => document.querySelector('[data-screen="schedule"]').click());
     document.getElementById('btnNewSchedule').addEventListener('click', () => openScheduleEditor());
+    document.getElementById('btnSaveDeliveryDefaults').addEventListener('click', saveDeliveryDefaults);
+    document.getElementById('btnPreviewTone').addEventListener('click', () => previewAlarm(document.getElementById('scheduleTone').value, Number(document.getElementById('scheduleVolume').value)));
+    document.getElementById('scheduleVolume').addEventListener('input', (event) => { document.getElementById('scheduleVolumeValue').textContent = `${event.target.value}%`; });
     document.getElementById('btnCloseScheduleEditor').addEventListener('click', () => closeModal('scheduleEditorModal'));
     document.getElementById('scheduleForm').addEventListener('submit', (event) => { event.preventDefault(); scheduleFromForm(); });
     document.getElementById('scheduleList').addEventListener('click', (event) => {
@@ -2167,7 +2292,7 @@
     document.getElementById('scheduleList').addEventListener('change', (event) => {
       const toggle = event.target.closest('[data-schedule-toggle]'); if (!toggle) return;
       const item = state.schedules.find((entry) => entry.id === toggle.dataset.scheduleToggle); if (!item) return;
-      cancelScheduleReminders(item.id); item.enabled = toggle.checked; item.updatedAt = Date.now(); clearReminderMarkers(item.id);
+      cancelScheduleReminders(item.id); item.enabled = toggle.checked; item.updatedAt = Math.max(Date.now(), Number(item.updatedAt || 0) + 1); clearReminderMarkers(item.id);
       if (item.enabled) {
         const marks = reminderMarkers();
         marks[item.id] = {};
@@ -2201,6 +2326,7 @@
 
       // Escape — close modals
       if (e.key === 'Escape') {
+        if (state.reminderVisible) { e.preventDefault(); handleReminderAction('dismiss', state.activeReminder?.item.id, state.activeReminder?.item.activityName); return; }
         closeAllModals();
         cancelSubtaskWait();
         return;
@@ -2441,7 +2567,8 @@
     // Close modal on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal(overlay.id);
+        if (e.target === overlay && overlay.id === 'reminderModal' && state.reminderVisible) handleReminderAction('dismiss', state.activeReminder?.item.id, state.activeReminder?.item.activityName);
+        else if (e.target === overlay) closeModal(overlay.id);
       });
     });
   } /* end bindEventsCore */

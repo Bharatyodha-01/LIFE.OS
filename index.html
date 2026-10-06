@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261006-schedule">
+  <link rel="stylesheet" href="style.css?v=20261006-delivery">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -108,6 +108,13 @@
     <section class="panel schedule-screen hidden" id="scheduleScreen">
       <div class="panel-header"><span class="panel-tag">PLAN</span><h2>Schedule</h2><button class="btn btn-sm" id="btnEnableNotifications" type="button">Enable alerts</button><button class="btn btn-primary" id="btnNewSchedule" type="button">+ Add schedule</button></div>
       <p class="schedule-intro">Plan your time. Reminders never start or stop tracking for you.</p>
+      <details class="delivery-defaults"><summary>Reminder defaults for new schedules</summary><div class="delivery-default-grid">
+        <label>Delivery<select id="defaultDelivery"><option value="notification">Notification only</option><option value="alarm">Alarm only</option><option value="vibration">Vibration only</option><option value="notification-alarm">Notification + alarm</option><option value="notification-vibration">Notification + vibration</option><option value="alarm-vibration">Alarm + vibration</option><option value="all">Notification + alarm + vibration</option></select></label>
+        <label>Alarm tone<select id="defaultTone"><option value="gentle">Gentle</option><option value="chime">Chime</option><option value="pulse">Pulse</option></select></label>
+        <label>Vibration<select id="defaultVibration"><option value="short">Short</option><option value="medium">Medium</option><option value="long">Long</option><option value="repeated">Repeated</option></select></label>
+        <label>Volume <input id="defaultVolume" type="range" min="0" max="100" value="55"></label>
+        <button type="button" class="btn btn-primary" id="btnSaveDeliveryDefaults">Save defaults</button>
+      </div></details>
       <div class="schedule-list" id="scheduleList"></div>
     </section>
     <section class="panel panel-live" id="livePanel">
@@ -365,6 +372,12 @@
         <label>Date<input id="scheduleDate" type="date" required></label>
         <div class="schedule-time-row"><label>Starts<input id="scheduleStart" type="time" required></label><label>Ends<input id="scheduleEnd" type="time" required></label></div>
         <label>Description <span class="optional-label">Optional</span><textarea id="scheduleDescription" rows="2" maxlength="240" placeholder="Add a note"></textarea></label>
+        <fieldset class="schedule-delivery"><legend>Reminder delivery</legend>
+          <label>Delivery<select id="scheduleDelivery"><option value="notification">Notification only</option><option value="alarm">Alarm only</option><option value="vibration">Vibration only</option><option value="notification-alarm">Notification + alarm</option><option value="notification-vibration">Notification + vibration</option><option value="alarm-vibration">Alarm + vibration</option><option value="all">Notification + alarm + vibration</option></select></label>
+          <div class="schedule-time-row"><label>Alarm tone<select id="scheduleTone"><option value="gentle">Gentle</option><option value="chime">Chime</option><option value="pulse">Pulse</option></select></label><label>Vibration<select id="scheduleVibration"><option value="short">Short</option><option value="medium">Medium</option><option value="long">Long</option><option value="repeated">Repeated</option></select></label></div>
+          <label>Volume <input id="scheduleVolume" type="range" min="0" max="100" value="55"><span class="volume-value" id="scheduleVolumeValue">55%</span></label>
+          <button type="button" class="btn btn-sm" id="btnPreviewTone">Preview alarm tone</button>
+        </fieldset>
         <label class="schedule-enabled"><input id="scheduleEnabled" type="checkbox" checked><span>Reminders enabled</span></label>
         <button class="btn btn-primary schedule-save" type="submit">Save schedule</button>
       </form>
@@ -376,6 +389,6 @@
   </div>
 
   <script src="charts.js?v=20260602-layered-analytics"></script>
-  <script src="script.js?v=20261006-schedule"></script>
+  <script src="script.js?v=20261006-delivery"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v26-schedule';
+const CACHE_NAME = 'lifeos-pwa-v27-delivery';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -20,12 +20,12 @@ const PRECACHE = [
   './style.css?v=20260529-compact-brand',
   './style.css?v=20260529-official-logo',
   './style.css?v=20260602-layered-analytics',
-  './style.css?v=20261006-schedule',
+  './style.css?v=20261006-delivery',
   './script.js',
   './script.js?v=20260529-key-context',
   './script.js?v=20260530-chart-analytics',
   './script.js?v=20260602-layered-analytics',
-  './script.js?v=20261006-schedule',
+  './script.js?v=20261006-delivery',
   './charts.js',
   './charts.js?v=20260530-chart-analytics',
   './charts.js?v=20260602-layered-analytics',
@@ -60,6 +60,14 @@ self.addEventListener('activate', (event) => {
       ))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    const appWindow = clients.find((client) => 'focus' in client);
+    return appWindow ? appWindow.focus() : self.clients.openWindow('./');
+  }));
 });
 
 self.addEventListener('fetch', (event) => {
