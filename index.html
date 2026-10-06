@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261006-theme">
+  <link rel="stylesheet" href="style.css?v=20261006-theme-gallery">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -79,6 +79,7 @@
     <div class="header-right">
       <button class="btn btn-ghost" id="btnCharts" type="button">CHARTS</button>
       <button class="btn btn-ghost" id="btnSchedule" type="button">SCHEDULE</button>
+      <button class="btn btn-ghost" id="btnThemes" type="button">THEMES</button>
       <button class="btn btn-ghost" id="btnSound" type="button">SND</button>
       <button class="btn btn-ghost hide-mobile" id="btnFullscreen" type="button">FULL</button>
       <button class="btn btn-ghost" id="btnHelp" type="button">?</button>
@@ -394,6 +395,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay hidden" id="themeGalleryModal" role="dialog" aria-modal="true" aria-labelledby="themeGalleryTitle">
+    <div class="modal modal-wide theme-gallery-modal">
+      <div class="modal-header">
+        <div><span class="panel-tag">PERSONALIZE</span><h2 id="themeGalleryTitle">Theme gallery</h2></div>
+        <button class="btn-close" id="btnCloseThemeGallery" type="button" aria-label="Close theme gallery">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="theme-gallery-intro">Choose a look for Life OS. Your selection updates the app immediately.</p>
+        <div class="theme-gallery-grid" id="themeGalleryGrid"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="helpModal">
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -450,6 +464,6 @@
   </div>
 
   <script src="charts.js?v=20260602-layered-analytics"></script>
-  <script src="script.js?v=20261006-theme"></script>
+  <script src="script.js?v=20261006-theme-gallery"></script>
 </body>
 </html>

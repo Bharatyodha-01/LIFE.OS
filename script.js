@@ -244,6 +244,27 @@
     state.appearance.themeId = id;
     applyTheme(true);
   }
+  function renderThemeGallery() {
+    const grid = document.getElementById('themeGalleryGrid');
+    if (!grid) return;
+    const descriptions = {
+      'midnight-black': 'A focused dark workspace with crisp green accents.',
+      'purple-focus': 'A calm night palette for deep work.',
+      'emerald-productivity': 'Natural greens with a steady, energetic feel.',
+      'arctic-light': 'A bright, clear interface for daytime use.',
+      'crimson-command': 'A bold command-center look with warm red accents.'
+    };
+    const options = Object.entries(THEME_DEFINITIONS).map(([id, theme]) => ({ id, theme, description: descriptions[id] || '' }));
+    options.push({ id: 'custom', theme: customThemeDefinition(), description: 'Build your own palette with custom colors.' });
+    grid.innerHTML = options.map(({ id, theme, description }) => {
+      const selected = state.appearance.themeId === id;
+      return '<article class="theme-gallery-card' + (selected ? ' selected' : '') + '">' +
+        '<div class="theme-gallery-preview" style="--preview-bg:' + theme.background + ';--preview-panel:' + theme.panel + ';--preview-accent:' + theme.accent + ';--preview-primary:' + theme.primary + '">' +
+          '<span class="preview-sidebar"></span><span class="preview-main"><i></i><i></i><b></b></span>' +
+        '</div><div class="theme-gallery-copy"><div class="theme-gallery-title-row"><h3>' + theme.name + '</h3>' + (selected ? '<span class="theme-current">CURRENT</span>' : '') + '</div>' +
+        '<p>' + description + '</p><button type="button" class="btn ' + (selected ? 'btn-ghost' : 'btn-primary') + ' theme-gallery-action" data-gallery-theme="' + id + '">' + (id === 'custom' ? 'Customize colors' : selected ? 'Selected' : 'Use theme') + '</button></div></article>';
+    }).join('');
+  }
   function updateContrastFeedback(theme) {
     const feedback = document.getElementById('contrastFeedback');
     if (!feedback) return;
@@ -2426,6 +2447,20 @@
       if (!choice) return;
       chooseTheme(choice.dataset.themeChoice);
     });
+    document.getElementById('themeGalleryGrid').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-gallery-theme]');
+      if (!button) return;
+      const id = button.dataset.galleryTheme;
+      if (id === 'custom') {
+        chooseTheme('custom');
+        closeModal('themeGalleryModal');
+        document.getElementById('btnSettings').click();
+        document.querySelector('#settingsModal .settings-tabs [data-tab="appearance"]')?.click();
+        return;
+      }
+      chooseTheme(id);
+      renderThemeGallery();
+    });
     document.querySelectorAll('[data-custom-color]').forEach((input) => input.addEventListener('input', () => {
       if (!state.appearance.customColors) chooseTheme('custom');
       state.appearance.customColors[input.dataset.customColor] = input.value;
@@ -2576,6 +2611,11 @@
       openModal('settingsModal');
       refreshMappingUI();
     });
+    document.getElementById('btnThemes').addEventListener('click', () => {
+      renderThemeGallery();
+      openModal('themeGalleryModal');
+    });
+    document.getElementById('btnCloseThemeGallery').addEventListener('click', () => closeModal('themeGalleryModal'));
     document.getElementById('btnCloseSettings').addEventListener('click', () => closeModal('settingsModal'));
     document.getElementById('btnHelp').addEventListener('click', () => {
       renderHelpKeyList();
