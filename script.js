@@ -96,7 +96,22 @@
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
     isRestoringTask: false,
-    schedules: [], reminderQueue: [], reminderVisible: false, activeReminder: null, alarmTimers: [], vibrationTimer: null
+    schedules: [], reminderQueue: [], reminderVisible: false, activeReminder: null, alarmTimers: [], vibrationTimer: null,
+    appearance: null, themeRefreshTimer: null
+  };
+
+  const THEME_DEFINITIONS = {
+    'midnight-black': { name: 'Midnight Black', background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#1a2a3a', text: '#ffffff', muted: '#aab6c1', primary: '#00cc83', secondary: '#00b4ff', accent: '#00ff9d', success: '#00cc83', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#00ff9d', distraction: '#ff3355' },
+    'purple-focus': { name: 'Purple Focus', background: '#090711', panel: '#110f1b', panelAlt: '#191626', border: '#39304d', text: '#f8f4ff', muted: '#b9aecb', primary: '#9d75ec', secondary: '#c292ff', accent: '#c39bff', success: '#53d7a1', warning: '#f4bd61', error: '#ff718a', productive: '#a98bff', neutral: '#53d7a1', distraction: '#ff718a' },
+    'emerald-productivity': { name: 'Emerald Productivity', background: '#07110d', panel: '#0b1711', panelAlt: '#122119', border: '#294638', text: '#f2fff7', muted: '#a9c6b4', primary: '#34bf82', secondary: '#60c9bd', accent: '#64e6a8', success: '#46d690', warning: '#e9bd60', error: '#ff6d72', productive: '#39bd78', neutral: '#64e6a8', distraction: '#ff6d72' },
+    'arctic-light': { name: 'Arctic Light', background: '#eef2f6', panel: '#ffffff', panelAlt: '#e5ebf1', border: '#c6d0da', text: '#192633', muted: '#526272', primary: '#176da5', secondary: '#4a708e', accent: '#13744d', success: '#167245', warning: '#8a5700', error: '#ad293b', productive: '#176da5', neutral: '#167245', distraction: '#ad293b' },
+    'crimson-command': { name: 'Crimson Command', background: '#10090c', panel: '#190e13', panelAlt: '#23131a', border: '#4a2832', text: '#fff5f6', muted: '#d0adb6', primary: '#d83e59', secondary: '#ed897e', accent: '#ff6479', success: '#63d2a0', warning: '#f2bb55', error: '#ff536b', productive: '#e66a7b', neutral: '#63d2a0', distraction: '#ff536b' }
+  };
+  const DEFAULT_APPEARANCE = {
+    themeId: 'midnight-black', customColors: null, layout: 'balanced', textSize: 'normal', accessibility: false,
+    visible: { timer: true, summary: true, activityLog: true, recent: true, analytics: true, upcoming: true, reminderWidget: true },
+    mainCardOrder: ['livePanel', 'panelTimeline', 'right-column'],
+    cardOrder: ['upcomingPanel', 'reminderWidget', 'panel-analytics', 'panel-recent']
   };
 
   function setupLaunchSplash() {
@@ -143,6 +158,148 @@
 
   function userPrefix() {
     return STORAGE_PREFIX + 'u_' + state.activeUserId + '_';
+  }
+
+  function loadAppearance() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(userPrefix() + 'appearance') || 'null');
+      state.appearance = { ...JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)), ...(saved || {}), visible: { ...DEFAULT_APPEARANCE.visible, ...(saved?.visible || {}) }, mainCardOrder: Array.isArray(saved?.mainCardOrder) ? saved.mainCardOrder : [...DEFAULT_APPEARANCE.mainCardOrder], cardOrder: Array.isArray(saved?.cardOrder) ? saved.cardOrder : [...DEFAULT_APPEARANCE.cardOrder] };
+    } catch (_) { state.appearance = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)); }
+    applyTheme(false);
+    applyUiAppearance(false);
+  }
+  function saveAppearance() { localStorage.setItem(userPrefix() + 'appearance', JSON.stringify(state.appearance)); }
+  function hexRgb(hex) {
+    const value = String(hex || '').replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(value)) return [0, 0, 0];
+    return [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)];
+  }
+  function blendHex(a, b, amount) {
+    const first = hexRgb(a); const second = hexRgb(b);
+    return '#' + first.map((value, index) => Math.round(value * (1 - amount) + second[index] * amount).toString(16).padStart(2, '0')).join('');
+  }
+  function contrastRatio(first, second) {
+    const luminance = (hex) => {
+      const channels = hexRgb(hex).map((channel) => channel / 255).map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+    return (values[0] + 0.05) / (values[1] + 0.05);
+  }
+  function customThemeDefinition() {
+    const saved = state.appearance.customColors || {};
+    const base = THEME_DEFINITIONS['midnight-black'];
+    const colors = { primary: saved.primary || base.primary, secondary: saved.secondary || base.secondary, accent: saved.accent || base.accent, background: saved.background || base.background, text: saved.text || base.text, success: saved.success || base.success, warning: saved.warning || base.warning, error: saved.error || base.error };
+    const light = contrastRatio(colors.background, '#ffffff') < 1.6;
+    const surface = light ? '#ffffff' : '#000000';
+    return { ...base, name: 'Custom', ...colors, panel: blendHex(colors.background, surface, 0.08), panelAlt: blendHex(colors.background, surface, 0.15), border: blendHex(colors.background, colors.text, 0.24), muted: blendHex(colors.text, colors.background, 0.35), productive: colors.primary, neutral: colors.success, distraction: colors.error };
+  }
+  function applyTheme(persist = true, updateControls = true) {
+    const id = state.appearance?.themeId || DEFAULT_APPEARANCE.themeId;
+    const theme = id === 'custom' ? customThemeDefinition() : (THEME_DEFINITIONS[id] || THEME_DEFINITIONS['midnight-black']);
+    const root = document.documentElement;
+    root.dataset.theme = id;
+    const alpha = (color, amount) => { const rgb = hexRgb(color); return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + amount + ')'; };
+    const values = {
+      '--bg-deep': theme.background, '--bg-panel': theme.panel, '--bg-panel-alt': theme.panelAlt, '--border': theme.border,
+      '--text': theme.text, '--text-dim': theme.muted, '--text-muted': theme.muted,
+      '--primary-color': theme.primary, '--accent': theme.accent, '--accent-dim': blendHex(theme.accent, theme.background, 0.28),
+      '--secondary': theme.secondary, '--blue': theme.secondary, '--success': theme.success, '--amber': theme.warning, '--warning': theme.warning,
+      '--red': theme.error, '--error': theme.error, '--productive': theme.productive, '--distraction': theme.distraction, '--neutral': theme.neutral,
+      '--productive-dim': alpha(theme.productive, 0.15), '--distraction-dim': alpha(theme.distraction, 0.15), '--neutral-dim': alpha(theme.neutral, 0.15),
+      '--chart-productive': theme.productive, '--chart-neutral': theme.neutral, '--chart-distraction': theme.distraction, '--chart-other': theme.border,
+      '--chart-text': theme.text, '--chart-panel': theme.panel, '--chart-deep': theme.background, '--chart-border': theme.border,
+      '--chart-primary': theme.primary, '--chart-secondary': theme.secondary, '--chart-warning': theme.warning, '--chart-error': theme.error,
+      '--chart-1': theme.productive, '--chart-2': theme.neutral, '--chart-3': theme.distraction, '--chart-4': theme.warning,
+      '--chart-5': theme.secondary, '--chart-6': theme.primary, '--chart-7': theme.accent, '--chart-8': theme.text, '--chart-9': theme.muted,
+      '--border-glow': alpha(theme.accent, 0.2), '--glow-green': '0 0 20px ' + alpha(theme.accent, 0.34) + ', 0 0 40px ' + alpha(theme.accent, 0.13),
+      '--glow-blue': '0 0 15px ' + alpha(theme.secondary, 0.28), '--font-scale': state.appearance?.textSize === 'compact' ? '0.92' : state.appearance?.textSize === 'large' ? '1.12' : '1'
+    };
+    Object.entries(values).forEach(([key, value]) => root.style.setProperty(key, value));
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.background);
+    if (updateControls) updateThemeControls(theme);
+    updateContrastFeedback(theme);
+    if (persist && state.appearance) saveAppearance();
+    clearTimeout(state.themeRefreshTimer);
+    state.themeRefreshTimer = setTimeout(renderChartsIfOpen, 100);
+  }
+  function updateThemeControls(theme) {
+    const selector = document.getElementById('themePreset');
+    if (selector) selector.value = state.appearance.themeId;
+    document.getElementById('customThemeSection')?.classList.toggle('is-custom-active', state.appearance.themeId === 'custom');
+    document.querySelectorAll('[data-custom-color]').forEach((input) => {
+      const key = input.dataset.customColor;
+      const source = state.appearance.customColors || {};
+      const value = source[key] || ({ primary: theme.primary, secondary: theme.secondary, accent: theme.accent, background: theme.background, text: theme.text, success: theme.success, warning: theme.warning, error: theme.error })[key];
+      if (value && input.value.toLowerCase() !== value.toLowerCase()) input.value = value;
+    });
+    const holder = document.getElementById('themeSwatches');
+    if (holder) holder.innerHTML = Object.entries(THEME_DEFINITIONS).map(([themeId, item]) => '<button type="button" class="theme-swatch ' + (themeId === state.appearance.themeId ? 'selected' : '') + '" data-theme-choice="' + themeId + '" aria-label="Apply ' + item.name + '"><span style="--swatch-bg:' + item.background + ';--swatch-panel:' + item.panel + ';--swatch-accent:' + item.accent + '"></span><small>' + item.name + '</small></button>').join('');
+  }
+  function chooseTheme(id) {
+    if (id === 'custom' && !state.appearance.customColors) {
+      const active = THEME_DEFINITIONS[state.appearance.themeId] || THEME_DEFINITIONS['midnight-black'];
+      state.appearance.customColors = { primary: active.primary, secondary: active.secondary, accent: active.accent, background: active.background, text: active.text, success: active.success, warning: active.warning, error: active.error };
+    }
+    state.appearance.themeId = id;
+    applyTheme(true);
+  }
+  function updateContrastFeedback(theme) {
+    const feedback = document.getElementById('contrastFeedback');
+    if (!feedback) return;
+    const readable = contrastRatio(theme.background, theme.text) >= 4.5 && contrastRatio(theme.panel, theme.text) >= 4.5 && contrastRatio(theme.background, theme.accent) >= 3 && contrastRatio(theme.panel, theme.primary) >= 3;
+    feedback.classList.toggle('contrast-warning', !readable);
+    feedback.textContent = readable ? 'Color contrast looks good.' : 'Low contrast detected. Adjust Text, Accent, Primary, or Background for easier reading.';
+  }
+  function applyUiAppearance(persist = true) {
+    const settings = state.appearance || DEFAULT_APPEARANCE;
+    document.body.dataset.layout = settings.layout || 'balanced';
+    document.body.dataset.textSize = settings.textSize || 'normal';
+    document.body.classList.toggle('accessibility-mode', !!settings.accessibility);
+    const visibilityTargets = {
+      timer: document.getElementById('livePanel'), recent: document.querySelector('.panel-recent'),
+      analytics: document.querySelector('.panel-analytics'), upcoming: document.getElementById('upcomingPanel'),
+      reminderWidget: document.getElementById('reminderWidget')
+    };
+    Object.entries(visibilityTargets).forEach(([key, element]) => { if (element) element.classList.toggle('custom-hidden', settings.visible[key] === false); });
+    const rightColumn = document.querySelector('.right-column');
+    const sideEmpty = ['upcoming', 'reminderWidget', 'analytics', 'recent'].every((key) => settings.visible[key] === false);
+    if (rightColumn) rightColumn.classList.toggle('custom-hidden', sideEmpty);
+    document.body.classList.toggle('dashboard-side-empty', sideEmpty);
+    const summary = document.getElementById('timelineSummary');
+    const tabs = document.getElementById('timelineRangeTabs');
+    const list = document.getElementById('timelineList');
+    const showSummary = settings.visible.summary !== false;
+    const showLog = settings.visible.activityLog !== false;
+    if (summary) summary.classList.toggle('custom-hidden', !showSummary);
+    if (tabs) tabs.classList.toggle('custom-hidden', !showLog);
+    if (list) list.classList.toggle('custom-hidden', !showLog);
+    document.querySelector('.panel-timeline')?.classList.toggle('custom-hidden', !showSummary && !showLog);
+    document.body.classList.toggle('dashboard-no-timer', settings.visible.timer === false);
+    document.body.classList.toggle('dashboard-no-timeline', !showSummary && !showLog);
+    state.appearance.mainCardOrder.forEach((id, index) => {
+      const card = id === 'right-column' ? document.querySelector('.right-column') : document.getElementById(id);
+      if (card) card.style.order = index;
+    });
+    state.appearance.cardOrder.forEach((id, index) => { const card = document.getElementById(id) || document.querySelector('.' + id); if (card) card.style.order = index; });
+    document.querySelectorAll('[data-ui-visible]').forEach((input) => { input.checked = settings.visible[input.dataset.uiVisible] !== false; });
+    document.querySelectorAll('[data-layout]').forEach((button) => button.classList.toggle('active', button.dataset.layout === settings.layout));
+    document.querySelectorAll('[data-text-size]').forEach((button) => button.classList.toggle('active', button.dataset.textSize === settings.textSize));
+    const accessibility = document.getElementById('accessibilityMode');
+    if (accessibility) accessibility.checked = !!settings.accessibility;
+    renderCardOrderControls();
+    if (persist) saveAppearance();
+  }
+  function renderCardOrderControls() {
+    const labels = { livePanel: 'Timer', panelTimeline: 'Activity Log & Summary', 'right-column': 'Side Column', upcomingPanel: 'Upcoming Schedule', reminderWidget: 'Reminder Widget', 'panel-analytics': 'Quick Analytics', 'panel-recent': 'Last 5 Activities' };
+    const render = (order, key) => order.map((id, index) => {
+      const name = labels[id] || id;
+      return '<div class="card-order-row"><span>' + name + '</span><button type="button" data-order-key="' + key + '" data-move-card="' + index + '" data-direction="-1" aria-label="Move ' + name + ' up" ' + (index === 0 ? 'disabled' : '') + '>↑</button><button type="button" data-order-key="' + key + '" data-move-card="' + index + '" data-direction="1" aria-label="Move ' + name + ' down" ' + (index === order.length - 1 ? 'disabled' : '') + '>↓</button></div>';
+    }).join('');
+    const main = document.getElementById('mainCardOrderControls');
+    const side = document.getElementById('cardOrderControls');
+    if (main) main.innerHTML = render(state.appearance.mainCardOrder, 'mainCardOrder');
+    if (side) side.innerHTML = render(state.appearance.cardOrder, 'cardOrder');
   }
 
   function sessionActiveKey() {
@@ -602,6 +759,9 @@
     Object.keys(localStorage).filter((k) => k.startsWith(userPrefix())).forEach((k) => localStorage.removeItem(k));
     state.mappings = normalizeMappingKeys(JSON.parse(JSON.stringify(DEFAULT_MAPPINGS)));
     saveMappings();
+    state.appearance = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE));
+    applyTheme(false);
+    applyUiAppearance(false);
     state.schedules = [];
     state.reminderQueue = [];
     state.reminderVisible = false;
@@ -762,6 +922,7 @@
     state.soundEnabled = state.prefs.soundEnabled !== false;
     applyPreferencesToUI();
     applyDeliveryDefaultsToUI();
+    loadAppearance();
   }
   function applyDeliveryDefaultsToUI() {
     const delivery = document.getElementById('defaultDelivery'); if (!delivery) return;
@@ -1058,6 +1219,8 @@
     }
     state.mappings = normalizeMappingKeys(JSON.parse(JSON.stringify(DEFAULT_MAPPINGS)));
     saveMappings();
+    state.appearance = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE));
+    applyTheme(false); applyUiAppearance(false);
   }
 
   function saveMappings() {
@@ -2257,6 +2420,50 @@
   }
 
   function bindEventsCore() {
+    document.getElementById('themePreset').addEventListener('change', (event) => chooseTheme(event.target.value));
+    document.getElementById('themeSwatches').addEventListener('click', (event) => {
+      const choice = event.target.closest('[data-theme-choice]');
+      if (!choice) return;
+      chooseTheme(choice.dataset.themeChoice);
+    });
+    document.querySelectorAll('[data-custom-color]').forEach((input) => input.addEventListener('input', () => {
+      if (!state.appearance.customColors) chooseTheme('custom');
+      state.appearance.customColors[input.dataset.customColor] = input.value;
+      state.appearance.themeId = 'custom';
+      applyTheme(true, false);
+    }));
+    document.getElementById('layoutChoices').addEventListener('click', (event) => {
+      const choice = event.target.closest('[data-layout]'); if (!choice) return;
+      state.appearance.layout = choice.dataset.layout; applyUiAppearance(true);
+    });
+    document.getElementById('textSizeChoices').addEventListener('click', (event) => {
+      const choice = event.target.closest('[data-text-size]'); if (!choice) return;
+      state.appearance.textSize = choice.dataset.textSize; applyTheme(true); applyUiAppearance(true);
+    });
+    document.getElementById('accessibilityMode').addEventListener('change', (event) => { state.appearance.accessibility = event.target.checked; applyUiAppearance(true); });
+    document.querySelectorAll('[data-ui-visible]').forEach((input) => input.addEventListener('change', () => {
+      state.appearance.visible[input.dataset.uiVisible] = input.checked;
+      applyUiAppearance(true);
+    }));
+    document.getElementById('cardOrderControls').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-move-card]'); if (!button) return;
+      const index = Number(button.dataset.moveCard); const next = index + Number(button.dataset.direction);
+      const order = state.appearance[button.dataset.orderKey];
+      if (!order || next < 0 || next >= order.length) return;
+      [order[index], order[next]] = [order[next], order[index]];
+      applyUiAppearance(true);
+    });
+    document.getElementById('mainCardOrderControls').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-move-card]'); if (!button) return;
+      const index = Number(button.dataset.moveCard); const next = index + Number(button.dataset.direction);
+      const order = state.appearance.mainCardOrder;
+      if (next < 0 || next >= order.length) return;
+      [order[index], order[next]] = [order[next], order[index]];
+      applyUiAppearance(true);
+    });
+    document.getElementById('btnReminderSettings').addEventListener('click', () => {
+      document.querySelector('[data-screen="schedule"]').click();
+    });
     document.addEventListener('pointerdown', () => { if (audioCtx?.state === 'suspended') audioCtx.resume().catch(() => {}); }, { passive: true });
     const alertButton = document.getElementById('btnEnableNotifications');
     if (!('Notification' in window)) alertButton.textContent = 'In-app alerts';

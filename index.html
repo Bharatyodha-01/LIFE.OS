@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#050608">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261006-delivery">
+  <link rel="stylesheet" href="style.css?v=20261006-theme">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -142,7 +142,7 @@
       </div>
     </section>
 
-    <section class="panel panel-timeline">
+      <section class="panel panel-timeline" id="panelTimeline">
       <div class="panel-header">
         <span class="panel-tag">LOG</span><h2>Timeline Analytics</h2>
         <div class="panel-actions">
@@ -163,6 +163,10 @@
     </section>
 
     <div class="right-column">
+      <section class="panel reminder-widget" id="reminderWidget">
+        <div class="panel-header"><span class="panel-tag">ALERTS</span><h2>Reminders</h2></div>
+        <div class="reminder-widget-body"><span class="reminder-widget-dot"></span><span>Schedule reminders are ready</span><button type="button" class="btn btn-sm" id="btnReminderSettings">Configure</button></div>
+      </section>
       <section class="panel upcoming-panel" id="upcomingPanel">
         <div class="panel-header"><span class="panel-tag">NEXT</span><h2>Upcoming schedule</h2><button class="btn btn-sm" id="btnOpenSchedule" type="button">View all</button></div>
         <div class="upcoming-content" id="upcomingContent"></div>
@@ -232,6 +236,7 @@
           <button class="tab" data-tab="sub" type="button">Subtasks</button>
           <button class="tab" data-tab="categories" type="button">Categories</button>
           <button class="tab" data-tab="prefs" type="button">Preferences</button>
+          <button class="tab" data-tab="appearance" type="button">Appearance</button>
           <button class="tab" data-tab="data" type="button">Data</button>
         </div>
 
@@ -308,6 +313,62 @@
             <p>Install on Android: tap browser menu → <strong>Add to Home screen</strong> or use the button below.</p>
             <button class="btn btn-primary" id="btnInstallPwa" type="button">Install App</button>
           </div>
+        </div>
+
+        <div class="tab-content appearance-content" data-tab="appearance" id="tabAppearance">
+          <section class="appearance-section">
+            <h3>Theme</h3>
+            <label class="appearance-field">Color theme<select id="themePreset" class="input-select">
+              <option value="midnight-black">Midnight Black (Default)</option><option value="purple-focus">Purple Focus</option><option value="emerald-productivity">Emerald Productivity</option><option value="arctic-light">Arctic Light</option><option value="crimson-command">Crimson Command</option><option value="custom">Custom colors</option>
+            </select></label>
+            <div class="theme-swatches" id="themeSwatches"></div>
+          </section>
+          <section class="appearance-section custom-theme-section" id="customThemeSection">
+            <h3>Custom colors <span>Preview updates instantly</span></h3>
+            <div class="color-picker-grid">
+              <label>Primary<input type="color" data-custom-color="primary" value="#00cc83"></label>
+              <label>Secondary<input type="color" data-custom-color="secondary" value="#00b4ff"></label>
+              <label>Accent<input type="color" data-custom-color="accent" value="#00ff9d"></label>
+              <label>Background<input type="color" data-custom-color="background" value="#050608"></label>
+              <label>Text<input type="color" data-custom-color="text" value="#ffffff"></label>
+              <label>Success<input type="color" data-custom-color="success" value="#00cc83"></label>
+              <label>Warning<input type="color" data-custom-color="warning" value="#ffaa00"></label>
+              <label>Error<input type="color" data-custom-color="error" value="#ff3355"></label>
+            </div>
+            <div class="contrast-feedback" id="contrastFeedback" role="status">Color contrast looks good.</div>
+          </section>
+          <section class="appearance-section">
+            <h3>Layout density</h3>
+            <div class="appearance-choice-row" id="layoutChoices">
+              <button type="button" data-layout="compact">Compact</button><button type="button" data-layout="balanced">Balanced</button><button type="button" data-layout="spacious">Spacious</button>
+            </div>
+          </section>
+          <section class="appearance-section">
+            <h3>Mission Control cards</h3>
+            <div class="visibility-options">
+              <label><input type="checkbox" data-ui-visible="timer"><span>Show Timer</span></label>
+              <label><input type="checkbox" data-ui-visible="summary"><span>Show Mission Summary</span></label>
+              <label><input type="checkbox" data-ui-visible="activityLog"><span>Show Activity Log</span></label>
+              <label><input type="checkbox" data-ui-visible="recent"><span>Show Last 5 Activities</span></label>
+              <label><input type="checkbox" data-ui-visible="analytics"><span>Show Quick Analytics</span></label>
+              <label><input type="checkbox" data-ui-visible="upcoming"><span>Show Upcoming Schedule</span></label>
+              <label><input type="checkbox" data-ui-visible="reminderWidget"><span>Show Reminder Widget</span></label>
+            </div>
+          </section>
+          <section class="appearance-section">
+            <h3>Dashboard card order</h3>
+            <p class="tab-desc">Use the arrows to rearrange dashboard cards.</p>
+            <h4>Main panels</h4><div id="mainCardOrderControls" class="card-order-controls"></div>
+            <h4>Side cards</h4>
+            <div id="cardOrderControls" class="card-order-controls"></div>
+          </section>
+          <section class="appearance-section">
+            <h3>Typography</h3>
+            <div class="appearance-choice-row" id="textSizeChoices">
+              <button type="button" data-text-size="compact">Compact</button><button type="button" data-text-size="normal">Normal</button><button type="button" data-text-size="large">Large</button>
+            </div>
+            <label class="accessibility-toggle"><input id="accessibilityMode" type="checkbox"><span>Accessibility mode · stronger contrast and focus outlines</span></label>
+          </section>
         </div>
 
         <div class="tab-content" data-tab="data" id="tabData">
@@ -389,6 +450,6 @@
   </div>
 
   <script src="charts.js?v=20260602-layered-analytics"></script>
-  <script src="script.js?v=20261006-delivery"></script>
+  <script src="script.js?v=20261006-theme"></script>
 </body>
 </html>

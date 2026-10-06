@@ -4,15 +4,21 @@
 (function (global) {
   'use strict';
 
-  const COLORS = {
-    productive: '#1e7bff',
-    neutral: '#00ff9d',
-    distraction: '#ff3355',
-    other: '#1a2a3a',
-    text: '#ffffff'
-  };
-
-  const CONTRAST_PALETTE = ['#1e7bff', '#00ff9d', '#ff3355', '#ffaa00', '#fff23d', '#9f5cff', '#00e5ff', '#ff4fd8', '#ffffff'];
+  const COLORS = {};
+  ['productive', 'neutral', 'distraction', 'other', 'text', 'panel', 'deep', 'border', 'primary', 'secondary', 'warning', 'error'].forEach((key) => {
+    Object.defineProperty(COLORS, key, { enumerable: true, get: () => getThemeColor(key) });
+  });
+  Object.defineProperty(COLORS, 'palette', { enumerable: true, get: () => getThemePalette() });
+  function getThemeColor(key) {
+    const fallback = { productive: '#1e7bff', neutral: '#00ff9d', distraction: '#ff3355', other: '#1a2a3a', text: '#ffffff', panel: '#0a0e14', deep: '#050608', border: '#1a2a3a', primary: '#00cc83', secondary: '#00b4ff', warning: '#ffaa00', error: '#ff3355' };
+    try { return getComputedStyle(document.documentElement).getPropertyValue('--chart-' + key).trim() || fallback[key]; } catch (_) { return fallback[key]; }
+  }
+  function getThemePalette() {
+    try {
+      const style = getComputedStyle(document.documentElement);
+      return Array.from({ length: 9 }, (_, index) => style.getPropertyValue('--chart-' + (index + 1)).trim()).filter(Boolean);
+    } catch (_) { return ['#1e7bff', '#00ff9d', '#ff3355', '#ffaa00', '#fff23d', '#9f5cff', '#00e5ff', '#ff4fd8', '#ffffff']; }
+  }
 
   let currentModel = null;
 
@@ -70,7 +76,8 @@
   }
 
   function colorForIndex(index) {
-    if (index < CONTRAST_PALETTE.length) return CONTRAST_PALETTE[index];
+    const palette = COLORS.palette;
+    if (index < palette.length) return palette[index];
     const hue = Math.round((index * 137.508) % 360);
     return `hsl(${hue}, 96%, 58%)`;
   }
@@ -244,7 +251,7 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = COLORS.text;
       ctx.textAlign = 'left';
       ctx.fillText(text, textX, label.y);
     });
@@ -290,7 +297,7 @@
       ctx.closePath();
       ctx.fillStyle = slice.color;
       ctx.fill();
-      ctx.strokeStyle = '#050608';
+      ctx.strokeStyle = COLORS.deep;
       ctx.lineWidth = large ? 4 : 2;
       ctx.stroke();
       start += angle;
@@ -302,9 +309,9 @@
 
     ctx.beginPath();
     ctx.arc(cx, cy, radius * 0.45, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0e14';
+    ctx.fillStyle = COLORS.panel;
     ctx.fill();
-    ctx.strokeStyle = '#1a2a3a';
+    ctx.strokeStyle = COLORS.border;
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -607,5 +614,5 @@
     });
   }
 
-  global.LifeOSCharts = { renderChartsPanel, COLORS };
+  global.LifeOSCharts = { renderChartsPanel, COLORS, getThemeColor };
 })(typeof window !== 'undefined' ? window : global);
