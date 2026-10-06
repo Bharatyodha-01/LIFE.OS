@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v25-layered-analytics';
+const CACHE_NAME = 'lifeos-pwa-v26-schedule';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -20,10 +20,12 @@ const PRECACHE = [
   './style.css?v=20260529-compact-brand',
   './style.css?v=20260529-official-logo',
   './style.css?v=20260602-layered-analytics',
+  './style.css?v=20261006-schedule',
   './script.js',
   './script.js?v=20260529-key-context',
   './script.js?v=20260530-chart-analytics',
   './script.js?v=20260602-layered-analytics',
+  './script.js?v=20261006-schedule',
   './charts.js',
   './charts.js?v=20260530-chart-analytics',
   './charts.js?v=20260602-layered-analytics',

@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20260602-layered-analytics">
+  <link rel="stylesheet" href="style.css?v=20261006-schedule">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -78,12 +78,18 @@
     </div>
     <div class="header-right">
       <button class="btn btn-ghost" id="btnCharts" type="button">CHARTS</button>
+      <button class="btn btn-ghost" id="btnSchedule" type="button">SCHEDULE</button>
       <button class="btn btn-ghost" id="btnSound" type="button">SND</button>
       <button class="btn btn-ghost hide-mobile" id="btnFullscreen" type="button">FULL</button>
       <button class="btn btn-ghost" id="btnHelp" type="button">?</button>
       <button class="btn btn-primary" id="btnSettings" type="button">SETTINGS</button>
     </div>
   </header>
+
+  <nav class="screen-nav" aria-label="Main sections">
+    <button type="button" class="screen-nav-btn active" data-screen="mission">Mission Control</button>
+    <button type="button" class="screen-nav-btn" data-screen="schedule">Schedule</button>
+  </nav>
 
   <!-- Mobile: hidden input captures phone keyboard -->
   <div class="mobile-key-bar" id="mobileKeyBar">
@@ -99,6 +105,11 @@
   </div>
 
   <main class="dashboard">
+    <section class="panel schedule-screen hidden" id="scheduleScreen">
+      <div class="panel-header"><span class="panel-tag">PLAN</span><h2>Schedule</h2><button class="btn btn-sm" id="btnEnableNotifications" type="button">Enable alerts</button><button class="btn btn-primary" id="btnNewSchedule" type="button">+ Add schedule</button></div>
+      <p class="schedule-intro">Plan your time. Reminders never start or stop tracking for you.</p>
+      <div class="schedule-list" id="scheduleList"></div>
+    </section>
     <section class="panel panel-live" id="livePanel">
       <div class="panel-header"><span class="panel-tag">LIVE</span><h2>Active Operation</h2></div>
       <div class="live-content">
@@ -145,6 +156,10 @@
     </section>
 
     <div class="right-column">
+      <section class="panel upcoming-panel" id="upcomingPanel">
+        <div class="panel-header"><span class="panel-tag">NEXT</span><h2>Upcoming schedule</h2><button class="btn btn-sm" id="btnOpenSchedule" type="button">View all</button></div>
+        <div class="upcoming-content" id="upcomingContent"></div>
+      </section>
       <section class="panel panel-analytics">
         <div class="panel-header"><span class="panel-tag">INTEL</span><h2>Daily Analytics</h2></div>
         <div class="analytics-grid">
@@ -340,7 +355,27 @@
   <div class="task-flash hidden" id="taskFlash"></div>
   <div class="toast hidden" id="toast"></div>
 
+  <div class="modal-overlay hidden" id="scheduleEditorModal">
+    <div class="modal schedule-editor">
+      <div class="modal-header"><h2 id="scheduleEditorTitle">New schedule</h2><button class="btn-close" id="btnCloseScheduleEditor" type="button">&times;</button></div>
+      <form class="modal-body schedule-form" id="scheduleForm">
+        <input type="hidden" id="scheduleId">
+        <label>Activity name<input id="scheduleName" required maxlength="80" placeholder="e.g. Study" autocomplete="off"></label>
+        <label>Category<select id="scheduleCategory"><option value="productive">Productive</option><option value="study">Study</option><option value="distraction">Distraction</option><option value="neutral">Neutral</option><option value="rest">Rest</option></select></label>
+        <label>Date<input id="scheduleDate" type="date" required></label>
+        <div class="schedule-time-row"><label>Starts<input id="scheduleStart" type="time" required></label><label>Ends<input id="scheduleEnd" type="time" required></label></div>
+        <label>Description <span class="optional-label">Optional</span><textarea id="scheduleDescription" rows="2" maxlength="240" placeholder="Add a note"></textarea></label>
+        <label class="schedule-enabled"><input id="scheduleEnabled" type="checkbox" checked><span>Reminders enabled</span></label>
+        <button class="btn btn-primary schedule-save" type="submit">Save schedule</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="reminderModal" role="dialog" aria-modal="true">
+    <div class="modal reminder-card"><div class="reminder-kicker" id="reminderKicker">SCHEDULE REMINDER</div><h2 id="reminderTitle"></h2><p id="reminderMessage"></p><div class="reminder-actions" id="reminderActions"></div></div>
+  </div>
+
   <script src="charts.js?v=20260602-layered-analytics"></script>
-  <script src="script.js?v=20260602-layered-analytics"></script>
+  <script src="script.js?v=20261006-schedule"></script>
 </body>
 </html>

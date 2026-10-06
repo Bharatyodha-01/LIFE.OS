@@ -19,6 +19,8 @@
   const LAUNCH_SPLASH_KEY = 'lifeos_launch_splash_seen';
   const LAUNCH_SPLASH_SETTLE_MS = 160;
   const TIMELINE_PANEL_STATE_KEY = 'lifeos_timeline_panel_state';
+  const SCHEDULE_KEY = 'schedules';
+  const REMINDER_STATE_KEY = 'schedule_reminders';
 
   const DEFAULT_PREFS = {
     subtaskWaitMs: 2000,
@@ -89,7 +91,8 @@
     timelineRange: 'today',
     deferredInstallPrompt: null,
     commandCentreExpanded: new Set(),
-    isRestoringTask: false
+    isRestoringTask: false,
+    schedules: [], reminderQueue: [], reminderVisible: false, activeReminder: null
   };
 
   function setupLaunchSplash() {
@@ -252,15 +255,163 @@
   function switchUser(userId) {
     if (userId === state.activeUserId) return;
 
+    state.reminderQueue = [];
+    state.reminderVisible = false;
+    state.activeReminder = null;
+    closeModal('reminderModal');
     saveCurrentActiveTask();
     cancelSubtaskWait();
     state.activeUserId = userId;
     saveUsers();
     loadPreferences();
     loadMappings();
+    loadSchedules();
     restoreCurrentActiveTask();
     refreshAllUI();
+    renderSchedules();
+    checkScheduleReminders();
     showToast('Switched to ' + getActiveUserName());
+  }
+
+  // ─── Planned schedules (separate from tracked activity logs) ──
+  function loadSchedules() {
+    try {
+      const list = JSON.parse(localStorage.getItem(userPrefix() + SCHEDULE_KEY) || '[]');
+      state.schedules = Array.isArray(list) ? list.filter((item) => item && item.id && Number.isFinite(Number(item.startTimestamp)) && Number.isFinite(Number(item.endTimestamp))) : [];
+    } catch (_) { state.schedules = []; }
+  }
+  function saveSchedules() { localStorage.setItem(userPrefix() + SCHEDULE_KEY, JSON.stringify(state.schedules)); }
+  function getScheduleStatus(item, now = Date.now()) {
+    if (!item.enabled) return 'Disabled';
+    if (now < item.startTimestamp) return 'Upcoming';
+    if (now < item.endTimestamp) return 'Active window';
+    return reminderMarkers()[item.id]?.started ? 'Completed' : 'Missed';
+  }
+  function markScheduleStarted(id) {
+    const marks = reminderMarkers();
+    marks[id] = { ...(marks[id] || {}), started: true };
+    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+  }
+  function scheduleTime(ts, dateOnly = false) {
+    return new Intl.DateTimeFormat(undefined, dateOnly ? { weekday: 'short', month: 'short', day: 'numeric' } : { hour: 'numeric', minute: '2-digit' }).format(new Date(ts));
+  }
+  function renderSchedules() {
+    const list = document.getElementById('scheduleList');
+    const upcoming = document.getElementById('upcomingContent');
+    if (!list || !upcoming) return;
+    const now = Date.now();
+    const ordered = [...state.schedules].sort((a, b) => a.startTimestamp - b.startTimestamp);
+    list.innerHTML = ordered.length ? ordered.map((item) => {
+      const status = getScheduleStatus(item, now);
+      return `<article class="schedule-card"><div class="schedule-card-main"><div class="schedule-card-title">${escapeHtml(item.activityName)}</div><div class="schedule-card-meta">${scheduleTime(item.startTimestamp, true)} · ${scheduleTime(item.startTimestamp)}–${scheduleTime(item.endTimestamp)} · ${escapeHtml(item.category)}</div>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}</div><span class="schedule-status status-${status.toLowerCase().replaceAll(' ', '-')}">${status}</span><label class="schedule-toggle" title="Enable reminders"><input type="checkbox" data-schedule-toggle="${item.id}" ${item.enabled ? 'checked' : ''}><span>Enabled</span></label><button class="btn btn-sm" data-schedule-edit="${item.id}" type="button">Edit</button><button class="btn btn-sm btn-danger" data-schedule-delete="${item.id}" type="button">Delete</button></article>`;
+    }).join('') : '<div class="schedule-empty">No plans yet. Add a schedule to make space for what matters.</div>';
+    const next = ordered.find((item) => item.enabled && item.endTimestamp > now);
+    upcoming.innerHTML = next ? `<div class="upcoming-name">${escapeHtml(next.activityName)}</div><div class="upcoming-meta">${scheduleTime(next.startTimestamp, true)} · ${scheduleTime(next.startTimestamp)}${now < next.startTimestamp ? ` · ${formatRemaining(next.startTimestamp - now)}` : ' · In progress'}</div><button class="btn btn-primary btn-sm" type="button" data-schedule-start="${next.id}">Start activity</button>` : '<div class="upcoming-empty">Nothing scheduled next.</div>';
+  }
+  function formatRemaining(ms) {
+    const minutes = Math.max(0, Math.ceil(ms / 60000));
+    if (minutes < 60) return `In ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    return `In ${hours}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`;
+  }
+  function openScheduleEditor(item = null) {
+    const form = document.getElementById('scheduleForm');
+    form.reset();
+    document.getElementById('scheduleId').value = item?.id || '';
+    document.getElementById('scheduleEditorTitle').textContent = item ? 'Edit schedule' : 'New schedule';
+    document.getElementById('scheduleName').value = item?.activityName || '';
+    document.getElementById('scheduleCategory').value = item?.category || 'study';
+    const date = item ? new Date(item.startTimestamp) : new Date();
+    document.getElementById('scheduleDate').value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    document.getElementById('scheduleStart').value = item ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}` : '09:00';
+    const endDate = item ? new Date(item.endTimestamp) : null;
+    document.getElementById('scheduleEnd').value = item ? `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}` : '10:00';
+    document.getElementById('scheduleDescription').value = item?.description || '';
+    document.getElementById('scheduleEnabled').checked = item ? !!item.enabled : true;
+    openModal('scheduleEditorModal');
+  }
+  function scheduleFromForm() {
+    const id = document.getElementById('scheduleId').value;
+    const day = document.getElementById('scheduleDate').value;
+    const start = new Date(`${day}T${document.getElementById('scheduleStart').value}`).getTime();
+    let end = new Date(`${day}T${document.getElementById('scheduleEnd').value}`).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) { showToast('Choose a valid date and time', 'error'); return; }
+    if (end <= start) { showToast('End time must be after start time', 'error'); return; }
+    const previous = state.schedules.find((item) => item.id === id);
+    const item = { id: id || (crypto.randomUUID ? crypto.randomUUID() : `schedule-${Date.now()}-${Math.random()}`), activityName: document.getElementById('scheduleName').value.trim(), category: document.getElementById('scheduleCategory').value, startTimestamp: start, endTimestamp: end, enabled: document.getElementById('scheduleEnabled').checked, description: document.getElementById('scheduleDescription').value.trim(), createdAt: previous?.createdAt || Date.now(), updatedAt: Date.now() };
+    if (!item.activityName) { showToast('Enter an activity name', 'error'); return; }
+    state.schedules = previous ? state.schedules.map((schedule) => schedule.id === id ? item : schedule) : [...state.schedules, item];
+    // A changed schedule gets fresh delivery markers; deleted/disabled plans cannot leave old reminders pending.
+    clearReminderMarkers(id);
+    if (id) cancelScheduleReminders(id);
+    saveSchedules(); renderSchedules(); closeModal('scheduleEditorModal'); checkScheduleReminders();
+    showToast(previous ? 'Schedule updated' : 'Schedule added');
+  }
+  function reminderMarkers() {
+    try { return JSON.parse(localStorage.getItem(userPrefix() + REMINDER_STATE_KEY) || '{}'); } catch (_) { return {}; }
+  }
+  function clearReminderMarkers(id) {
+    const marks = reminderMarkers();
+    if (id) delete marks[id];
+    else Object.keys(marks).forEach((key) => { if (!state.schedules.some((item) => item.id === key)) delete marks[key]; });
+    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+  }
+  function cancelScheduleReminders(id) {
+    state.reminderQueue = state.reminderQueue.filter((reminder) => reminder.item.id !== id);
+    if (state.activeReminder?.item.id === id) {
+      closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null; showNextReminder();
+    }
+  }
+  function checkScheduleReminders() {
+    if (!state.schedules) return;
+    const now = Date.now(); const marks = reminderMarkers();
+    state.schedules.forEach((item) => {
+      if (!item.enabled) return;
+      ['start', 'end'].forEach((kind) => {
+        const key = `${kind}:${item.updatedAt}`;
+        if (now >= (kind === 'start' ? item.startTimestamp : item.endTimestamp) && marks[item.id]?.[kind] !== key) {
+          marks[item.id] = { ...(marks[item.id] || {}), [kind]: key };
+          state.reminderQueue.push({ item, kind });
+        }
+      });
+    });
+    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+    renderSchedules();
+    showNextReminder();
+  }
+  function showNextReminder() {
+    if (state.reminderVisible || !state.reminderQueue.length) return;
+    const reminder = state.reminderQueue.shift(); const { item, kind } = reminder;
+    if (!state.schedules.some((current) => current.id === item.id && current.enabled && current.updatedAt === item.updatedAt)) { showNextReminder(); return; }
+    state.reminderVisible = true;
+    state.activeReminder = reminder;
+    const start = kind === 'start';
+    document.getElementById('reminderKicker').textContent = start ? 'START REMINDER' : 'END REMINDER';
+    document.getElementById('reminderTitle').textContent = start ? `Time to start: ${item.activityName}` : `${item.activityName} has reached its scheduled end time`;
+    document.getElementById('reminderMessage').textContent = start ? `${scheduleTime(item.startTimestamp)} · Your planned session is ready when you are.` : 'Your planned session has ended. Choose what happens next.';
+    const actions = start ? [['Start activity', 'start'], ['Snooze 5 min', 'snooze'], ['Dismiss', 'dismiss']] : [['Stop current activity', 'stop'], ['Continue', 'continue'], ['Log activity', 'log'], ['Dismiss', 'dismiss']];
+    document.getElementById('reminderActions').innerHTML = actions.map(([label, action]) => `<button class="btn ${action === 'start' || action === 'stop' ? 'btn-primary' : ''}" type="button" data-reminder-action="${action}" data-reminder-id="${item.id}" data-reminder-name="${escapeHtml(item.activityName)}">${label}</button>`).join('');
+    openModal('reminderModal');
+    if (document.visibilityState === 'hidden' && 'Notification' in window && Notification.permission === 'granted') new Notification(start ? `Time to start: ${item.activityName}` : `${item.activityName} session ended`, { body: 'Open LIFE-OS to choose an action.', tag: `${item.id}-${kind}-${item.updatedAt}` });
+  }
+  function handleReminderAction(action, id, name) {
+    closeModal('reminderModal'); state.reminderVisible = false; state.activeReminder = null;
+    if (action === 'start') {
+      const key = Object.keys(state.mappings.mainTasks).find((candidate) => state.mappings.mainTasks[candidate].toLowerCase() === name.toLowerCase()) || null;
+      startTask(name, null, key); saveCurrentActiveTask(); updateLivePanel(); updateSystemStatus();
+      markScheduleStarted(id);
+    } else if (action === 'stop' && state.currentTask) endCurrentTask(new Date());
+    else if (action === 'log') {
+      const planned = state.schedules.find((item) => item.id === id);
+      if (planned) {
+        saveTaskSegmentsByDay({ main: planned.activityName, sub: null }, planned.startTimestamp, planned.endTimestamp);
+        renderTimeline(); renderRecent(); renderAnalytics(); renderChartsIfOpen(); updateTodaySummary();
+        showToast(`Logged planned session: ${planned.activityName}`);
+      }
+    } else if (action === 'snooze') {
+      setTimeout(() => { const item = state.schedules.find((schedule) => schedule.id === id); if (!item || !item.enabled) return; state.reminderQueue.push({ item, kind: 'start', snoozed: true }); showNextReminder(); }, 5 * 60 * 1000);
+    }
+    showNextReminder();
   }
 
   function getActiveUserName() {
@@ -353,10 +504,16 @@
     Object.keys(localStorage).filter((k) => k.startsWith(userPrefix())).forEach((k) => localStorage.removeItem(k));
     state.mappings = normalizeMappingKeys(JSON.parse(JSON.stringify(DEFAULT_MAPPINGS)));
     saveMappings();
+    state.schedules = [];
+    state.reminderQueue = [];
+    state.reminderVisible = false;
+    state.activeReminder = null;
+    closeModal('reminderModal');
     state.currentTask = null;
     cancelSubtaskWait();
     removeActiveTask();
     refreshAllUI();
+    renderSchedules();
     showToast('User data cleared');
   }
 
@@ -1981,6 +2138,55 @@
   }
 
   function bindEventsCore() {
+    const alertButton = document.getElementById('btnEnableNotifications');
+    if (!('Notification' in window)) alertButton.textContent = 'In-app alerts';
+    else if (Notification.permission === 'granted') alertButton.textContent = 'System alerts on';
+    alertButton.addEventListener('click', async () => {
+      if (!('Notification' in window)) { showToast('This browser supports in-app reminders only', 'error'); return; }
+      if (Notification.permission === 'granted') { showToast('System alerts are enabled'); return; }
+      const permission = await Notification.requestPermission();
+      alertButton.textContent = permission === 'granted' ? 'System alerts on' : 'Alerts blocked';
+      showToast(permission === 'granted' ? 'System alerts enabled' : 'Allow notifications in browser settings', permission === 'granted' ? 'success' : 'error');
+    });
+    document.querySelectorAll('.screen-nav-btn').forEach((button) => button.addEventListener('click', () => {
+      const isSchedule = button.dataset.screen === 'schedule';
+      document.body.classList.toggle('schedule-view', isSchedule);
+      document.querySelectorAll('.screen-nav-btn').forEach((item) => item.classList.toggle('active', item === button));
+      if (isSchedule) renderSchedules();
+    }));
+    document.getElementById('btnSchedule').addEventListener('click', () => document.querySelector('[data-screen="schedule"]').click());
+    document.getElementById('btnOpenSchedule').addEventListener('click', () => document.querySelector('[data-screen="schedule"]').click());
+    document.getElementById('btnNewSchedule').addEventListener('click', () => openScheduleEditor());
+    document.getElementById('btnCloseScheduleEditor').addEventListener('click', () => closeModal('scheduleEditorModal'));
+    document.getElementById('scheduleForm').addEventListener('submit', (event) => { event.preventDefault(); scheduleFromForm(); });
+    document.getElementById('scheduleList').addEventListener('click', (event) => {
+      const edit = event.target.closest('[data-schedule-edit]'); const del = event.target.closest('[data-schedule-delete]');
+      if (edit) openScheduleEditor(state.schedules.find((item) => item.id === edit.dataset.scheduleEdit));
+      if (del) { const id = del.dataset.scheduleDelete; cancelScheduleReminders(id); state.schedules = state.schedules.filter((item) => item.id !== id); clearReminderMarkers(id); saveSchedules(); renderSchedules(); showToast('Schedule deleted'); }
+    });
+    document.getElementById('scheduleList').addEventListener('change', (event) => {
+      const toggle = event.target.closest('[data-schedule-toggle]'); if (!toggle) return;
+      const item = state.schedules.find((entry) => entry.id === toggle.dataset.scheduleToggle); if (!item) return;
+      cancelScheduleReminders(item.id); item.enabled = toggle.checked; item.updatedAt = Date.now(); clearReminderMarkers(item.id);
+      if (item.enabled) {
+        const marks = reminderMarkers();
+        marks[item.id] = {};
+        if (item.startTimestamp <= Date.now()) marks[item.id].start = `start:${item.updatedAt}`;
+        if (item.endTimestamp <= Date.now()) marks[item.id].end = `end:${item.updatedAt}`;
+        localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+      }
+      saveSchedules(); renderSchedules(); checkScheduleReminders();
+    });
+    document.getElementById('upcomingContent').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-schedule-start]'); if (!button) return;
+      const item = state.schedules.find((entry) => entry.id === button.dataset.scheduleStart); if (!item) return;
+      const key = Object.keys(state.mappings.mainTasks).find((candidate) => state.mappings.mainTasks[candidate].toLowerCase() === item.activityName.toLowerCase()) || null;
+      startTask(item.activityName, null, key); saveCurrentActiveTask(); updateLivePanel(); updateSystemStatus(); showToast(`Started: ${item.activityName}`);
+      markScheduleStarted(item.id); renderSchedules();
+    });
+    document.getElementById('reminderActions').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-reminder-action]'); if (button) handleReminderAction(button.dataset.reminderAction, button.dataset.reminderId, button.dataset.reminderName);
+    });
     // Global keyboard handler — core of the app
     document.addEventListener('keydown', (e) => {
       if (isTypingContext(e)) return;
@@ -2317,6 +2523,7 @@
     loadPreferences();
     loadTimelinePanelState();
     loadMappings();
+    loadSchedules();
 
     // PHASE 1: Restore active task BEFORE the first UI render
     console.log('[LIFE-OS] init() PHASE 1: Starting task restoration');
@@ -2333,6 +2540,7 @@
     setupMobileKeyboard();
     setupPWA();
     refreshAllUI();
+    renderSchedules();
 
     // PHASE 3: END restoration phase - now safe to accept key input
     console.log('[LIFE-OS] init() PHASE 3: Completing restoration phase');
@@ -2361,6 +2569,10 @@
 
     // Live clock + timer tick every second
     setInterval(tickTimer, 1000);
+    setInterval(checkScheduleReminders, 1000);
+    window.addEventListener('focus', checkScheduleReminders);
+    window.addEventListener('pageshow', checkScheduleReminders);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkScheduleReminders(); });
     tickTimer();
 
     console.log('%c LIFE-OS ONLINE ', 'background:#00ff9d;color:#000;font-weight:bold;padding:4px 8px;');
