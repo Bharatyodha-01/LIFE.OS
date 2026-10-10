@@ -101,14 +101,22 @@
   };
 
   const THEME_DEFINITIONS = {
-    'midnight-black': { name: 'Midnight Black', background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#1a2a3a', text: '#ffffff', muted: '#aab6c1', primary: '#00cc83', secondary: '#00b4ff', accent: '#00ff9d', success: '#00cc83', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#00ff9d', distraction: '#ff3355' },
-    'purple-focus': { name: 'Purple Focus', background: '#090711', panel: '#110f1b', panelAlt: '#191626', border: '#39304d', text: '#f8f4ff', muted: '#b9aecb', primary: '#9d75ec', secondary: '#c292ff', accent: '#c39bff', success: '#53d7a1', warning: '#f4bd61', error: '#ff718a', productive: '#a98bff', neutral: '#53d7a1', distraction: '#ff718a' },
-    'emerald-productivity': { name: 'Emerald Productivity', background: '#07110d', panel: '#0b1711', panelAlt: '#122119', border: '#294638', text: '#f2fff7', muted: '#a9c6b4', primary: '#34bf82', secondary: '#60c9bd', accent: '#64e6a8', success: '#46d690', warning: '#e9bd60', error: '#ff6d72', productive: '#39bd78', neutral: '#64e6a8', distraction: '#ff6d72' },
-    'arctic-light': { name: 'Arctic Light', background: '#eef2f6', panel: '#ffffff', panelAlt: '#e5ebf1', border: '#c6d0da', text: '#192633', muted: '#526272', primary: '#176da5', secondary: '#4a708e', accent: '#13744d', success: '#167245', warning: '#8a5700', error: '#ad293b', productive: '#176da5', neutral: '#167245', distraction: '#ad293b' },
-    'crimson-command': { name: 'Crimson Command', background: '#10090c', panel: '#190e13', panelAlt: '#23131a', border: '#4a2832', text: '#fff5f6', muted: '#d0adb6', primary: '#d83e59', secondary: '#ed897e', accent: '#ff6479', success: '#63d2a0', warning: '#f2bb55', error: '#ff536b', productive: '#e66a7b', neutral: '#63d2a0', distraction: '#ff536b' }
+    standard: { name: 'Standard', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#1a2a3a', text: '#ffffff', muted: '#aab6c1', primary: '#00cc83', secondary: '#00b4ff', accent: '#00ff9d', success: '#00cc83', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#00ff9d', distraction: '#ff3355' },
+    'blush-pink': { name: 'Blush Pink', light: true, background: '#fff5f8', panel: '#ffffff', panelAlt: '#ffe8ef', border: '#f3c4d4', text: '#1a1216', muted: '#8a6b76', primary: '#e85a8c', secondary: '#f4a0b8', accent: '#ff6b9d', success: '#3faf7a', warning: '#d4890f', error: '#d63d5c', productive: '#e85a8c', neutral: '#3faf7a', distraction: '#d63d5c' },
+    catppuccin: { name: 'Catppuccin', light: false, background: '#1e1e2e', panel: '#181825', panelAlt: '#313244', border: '#45475a', text: '#cdd6f4', muted: '#a6adc8', primary: '#89b4fa', secondary: '#cba6f7', accent: '#f5c2e7', success: '#a6e3a1', warning: '#f9e2af', error: '#f38ba8', productive: '#89b4fa', neutral: '#a6e3a1', distraction: '#f38ba8' },
+    nord: { name: 'Nord', light: false, background: '#2e3440', panel: '#3b4252', panelAlt: '#434c5e', border: '#4c566a', text: '#eceff4', muted: '#d8dee9', primary: '#88c0d0', secondary: '#81a1c1', accent: '#8fbcbb', success: '#a3be8c', warning: '#ebcb8b', error: '#bf616a', productive: '#88c0d0', neutral: '#a3be8c', distraction: '#bf616a' },
+    'tokyo-night': { name: 'Tokyo Night', light: false, background: '#1a1b26', panel: '#16161e', panelAlt: '#24283b', border: '#414868', text: '#c0caf5', muted: '#a9b1d6', primary: '#7aa2f7', secondary: '#bb9af7', accent: '#7dcfff', success: '#9ece6a', warning: '#e0af68', error: '#f7768e', productive: '#7aa2f7', neutral: '#9ece6a', distraction: '#f7768e' },
+    'rose-pine': { name: 'Rosé Pine', light: false, background: '#191724', panel: '#1f1d2e', panelAlt: '#26233a', border: '#403d52', text: '#e0def4', muted: '#908caa', primary: '#c4a7e7', secondary: '#ebbcba', accent: '#eb6f92', success: '#9ccfd8', warning: '#f6c177', error: '#eb6f92', productive: '#c4a7e7', neutral: '#9ccfd8', distraction: '#eb6f92' }
+  };
+  const LEGACY_THEME_IDS = {
+    'midnight-black': 'standard',
+    'purple-focus': 'catppuccin',
+    'emerald-productivity': 'nord',
+    'arctic-light': 'blush-pink',
+    'crimson-command': 'rose-pine'
   };
   const DEFAULT_APPEARANCE = {
-    themeId: 'midnight-black', customColors: null, layout: 'balanced', textSize: 'normal', accessibility: false,
+    themeId: 'standard', customColors: null, layout: 'balanced', textSize: 'normal', accessibility: false,
     visible: { timer: true, summary: true, activityLog: true, recent: true, analytics: true, upcoming: true, reminderWidget: true },
     mainCardOrder: ['livePanel', 'panelTimeline', 'right-column'],
     cardOrder: ['upcomingPanel', 'reminderWidget', 'panel-analytics', 'panel-recent']
@@ -160,10 +168,16 @@
     return STORAGE_PREFIX + 'u_' + state.activeUserId + '_';
   }
 
+  function resolveThemeId(themeId) {
+    if (themeId === 'custom') return 'custom';
+    if (THEME_DEFINITIONS[themeId]) return themeId;
+    return LEGACY_THEME_IDS[themeId] || DEFAULT_APPEARANCE.themeId;
+  }
   function loadAppearance() {
     try {
       const saved = JSON.parse(localStorage.getItem(userPrefix() + 'appearance') || 'null');
       state.appearance = { ...JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)), ...(saved || {}), visible: { ...DEFAULT_APPEARANCE.visible, ...(saved?.visible || {}) }, mainCardOrder: Array.isArray(saved?.mainCardOrder) ? saved.mainCardOrder : [...DEFAULT_APPEARANCE.mainCardOrder], cardOrder: Array.isArray(saved?.cardOrder) ? saved.cardOrder : [...DEFAULT_APPEARANCE.cardOrder] };
+      state.appearance.themeId = resolveThemeId(state.appearance.themeId);
     } catch (_) { state.appearance = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)); }
     applyTheme(false);
     applyUiAppearance(false);
@@ -188,17 +202,19 @@
   }
   function customThemeDefinition() {
     const saved = state.appearance.customColors || {};
-    const base = THEME_DEFINITIONS['midnight-black'];
+    const base = THEME_DEFINITIONS.standard;
     const colors = { primary: saved.primary || base.primary, secondary: saved.secondary || base.secondary, accent: saved.accent || base.accent, background: saved.background || base.background, text: saved.text || base.text, success: saved.success || base.success, warning: saved.warning || base.warning, error: saved.error || base.error };
     const light = contrastRatio(colors.background, '#ffffff') < 1.6;
     const surface = light ? '#ffffff' : '#000000';
-    return { ...base, name: 'Custom', ...colors, panel: blendHex(colors.background, surface, 0.08), panelAlt: blendHex(colors.background, surface, 0.15), border: blendHex(colors.background, colors.text, 0.24), muted: blendHex(colors.text, colors.background, 0.35), productive: colors.primary, neutral: colors.success, distraction: colors.error };
+    return { ...base, name: 'Custom', light, ...colors, panel: blendHex(colors.background, surface, 0.08), panelAlt: blendHex(colors.background, surface, 0.15), border: blendHex(colors.background, colors.text, 0.24), muted: blendHex(colors.text, colors.background, 0.35), productive: colors.primary, neutral: colors.success, distraction: colors.error };
   }
   function applyTheme(persist = true, updateControls = true) {
-    const id = state.appearance?.themeId || DEFAULT_APPEARANCE.themeId;
-    const theme = id === 'custom' ? customThemeDefinition() : (THEME_DEFINITIONS[id] || THEME_DEFINITIONS['midnight-black']);
+    const id = resolveThemeId(state.appearance?.themeId || DEFAULT_APPEARANCE.themeId);
+    if (state.appearance && state.appearance.themeId !== 'custom') state.appearance.themeId = id;
+    const theme = id === 'custom' ? customThemeDefinition() : (THEME_DEFINITIONS[id] || THEME_DEFINITIONS.standard);
     const root = document.documentElement;
     root.dataset.theme = id;
+    root.dataset.themeMode = theme.light ? 'light' : 'dark';
     const alpha = (color, amount) => { const rgb = hexRgb(color); return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + amount + ')'; };
     const values = {
       '--bg-deep': theme.background, '--bg-panel': theme.panel, '--bg-panel-alt': theme.panelAlt, '--border': theme.border,
@@ -238,21 +254,22 @@
   }
   function chooseTheme(id) {
     if (id === 'custom' && !state.appearance.customColors) {
-      const active = THEME_DEFINITIONS[state.appearance.themeId] || THEME_DEFINITIONS['midnight-black'];
+      const active = THEME_DEFINITIONS[resolveThemeId(state.appearance.themeId)] || THEME_DEFINITIONS.standard;
       state.appearance.customColors = { primary: active.primary, secondary: active.secondary, accent: active.accent, background: active.background, text: active.text, success: active.success, warning: active.warning, error: active.error };
     }
-    state.appearance.themeId = id;
+    state.appearance.themeId = id === 'custom' ? 'custom' : resolveThemeId(id);
     applyTheme(true);
   }
   function renderThemeGallery() {
     const grid = document.getElementById('themeGalleryGrid');
     if (!grid) return;
     const descriptions = {
-      'midnight-black': 'A focused dark workspace with crisp green accents.',
-      'purple-focus': 'A calm night palette for deep work.',
-      'emerald-productivity': 'Natural greens with a steady, energetic feel.',
-      'arctic-light': 'A bright, clear interface for daytime use.',
-      'crimson-command': 'A bold command-center look with warm red accents.'
+      standard: 'The original Life OS look — dark mission control with neon green.',
+      'blush-pink': 'Soft white, black, and pink — cute aesthetic for a bright vibe.',
+      catppuccin: 'Popular pastel mocha palette, cozy and easy on the eyes.',
+      nord: 'Cool arctic blues and frosty neutrals for calm focus.',
+      'tokyo-night': 'City-night blues and purples with crisp neon accents.',
+      'rose-pine': 'Warm muted rose tones with a soft, elegant night feel.'
     };
     const options = Object.entries(THEME_DEFINITIONS).map(([id, theme]) => ({ id, theme, description: descriptions[id] || '' }));
     options.push({ id: 'custom', theme: customThemeDefinition(), description: 'Build your own palette with custom colors.' });
