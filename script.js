@@ -124,7 +124,7 @@
   const DEFAULT_APPEARANCE = {
     themeId: 'standard', customColors: null, layout: 'balanced', textSize: 'normal', accessibility: false,
     visible: { timer: true, summary: true, activityLog: true, recent: true, analytics: true, upcoming: true, reminderWidget: true },
-    mainCardOrder: ['livePanel', 'panelTimeline', 'right-column'],
+    mainCardOrder: ['liveColumn', 'panelTimeline', 'right-column'],
     cardOrder: ['upcomingPanel', 'reminderWidget', 'panel-analytics', 'panel-recent']
   };
 
@@ -184,6 +184,7 @@
       const saved = JSON.parse(localStorage.getItem(userPrefix() + 'appearance') || 'null');
       state.appearance = { ...JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)), ...(saved || {}), visible: { ...DEFAULT_APPEARANCE.visible, ...(saved?.visible || {}) }, mainCardOrder: Array.isArray(saved?.mainCardOrder) ? saved.mainCardOrder : [...DEFAULT_APPEARANCE.mainCardOrder], cardOrder: Array.isArray(saved?.cardOrder) ? saved.cardOrder : [...DEFAULT_APPEARANCE.cardOrder] };
       state.appearance.themeId = resolveThemeId(state.appearance.themeId);
+      state.appearance.mainCardOrder = state.appearance.mainCardOrder.map((id) => id === 'livePanel' ? 'liveColumn' : id);
     } catch (_) { state.appearance = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE)); }
     applyTheme(false);
     applyUiAppearance(false);
@@ -323,7 +324,7 @@
     document.body.classList.toggle('dashboard-no-timer', settings.visible.timer === false);
     document.body.classList.toggle('dashboard-no-timeline', !showSummary && !showLog);
     state.appearance.mainCardOrder.forEach((id, index) => {
-      const card = id === 'right-column' ? document.querySelector('.right-column') : document.getElementById(id);
+      const card = id === 'right-column' ? document.querySelector('.right-column') : document.getElementById(id === 'livePanel' ? 'liveColumn' : id);
       if (card) card.style.order = index;
     });
     state.appearance.cardOrder.forEach((id, index) => { const card = document.getElementById(id) || document.querySelector('.' + id); if (card) card.style.order = index; });
@@ -336,7 +337,7 @@
     if (persist) saveAppearance();
   }
   function renderCardOrderControls() {
-    const labels = { livePanel: 'Timer', panelTimeline: 'Activity Log & Summary', 'right-column': 'Side Column', upcomingPanel: 'Upcoming Schedule', reminderWidget: 'Reminder Widget', 'panel-analytics': 'Quick Analytics', 'panel-recent': 'Last 5 Activities' };
+    const labels = { liveColumn: 'Timer', livePanel: 'Timer', panelTimeline: 'Activity Log & Summary', 'right-column': 'Side Column', upcomingPanel: 'Upcoming Schedule', reminderWidget: 'Reminder Widget', 'panel-analytics': 'Quick Analytics', 'panel-recent': 'Last 5 Activities' };
     const render = (order, key) => order.map((id, index) => {
       const name = labels[id] || id;
       return '<div class="card-order-row"><span>' + name + '</span><button type="button" data-order-key="' + key + '" data-move-card="' + index + '" data-direction="-1" aria-label="Move ' + name + ' up" ' + (index === 0 ? 'disabled' : '') + '>↑</button><button type="button" data-order-key="' + key + '" data-move-card="' + index + '" data-direction="1" aria-label="Move ' + name + ' down" ' + (index === order.length - 1 ? 'disabled' : '') + '>↓</button></div>';

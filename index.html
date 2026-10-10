@@ -14,7 +14,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20261010-contrast-themes">
+  <link rel="stylesheet" href="style.css?v=20261010-nav-left">
   <script>
     try {
       if (sessionStorage.getItem('lifeos_launch_splash_seen') === '1') {
@@ -87,11 +87,6 @@
     </div>
   </header>
 
-  <nav class="screen-nav" aria-label="Main sections">
-    <button type="button" class="screen-nav-btn active" data-screen="mission">Mission Control</button>
-    <button type="button" class="screen-nav-btn" data-screen="schedule">Schedule</button>
-  </nav>
-
   <!-- Mobile: hidden input captures phone keyboard -->
   <div class="mobile-key-bar" id="mobileKeyBar">
     <button type="button" class="btn btn-primary" id="btnMobileKeys">Tap here — use phone keyboard to log tasks</button>
@@ -118,6 +113,11 @@
       </div></details>
       <div class="schedule-list" id="scheduleList"></div>
     </section>
+    <div class="dashboard-col-live" id="liveColumn">
+    <nav class="screen-nav" aria-label="Main sections">
+      <button type="button" class="screen-nav-btn active" data-screen="mission">Mission Control</button>
+      <button type="button" class="screen-nav-btn" data-screen="schedule">Schedule</button>
+    </nav>
     <section class="panel panel-live" id="livePanel">
       <div class="panel-header"><span class="panel-tag">LIVE</span><h2>Active Operation</h2></div>
       <div class="live-content">
@@ -142,8 +142,9 @@
         </div>
       </div>
     </section>
+    </div>
 
-      <section class="panel panel-timeline" id="panelTimeline">
+    <section class="panel panel-timeline" id="panelTimeline">
       <div class="panel-header">
         <span class="panel-tag">LOG</span><h2>Timeline Analytics</h2>
         <div class="panel-actions">
@@ -471,6 +472,6 @@
   </div>
 
   <script src="charts.js?v=20260602-layered-analytics"></script>
-  <script src="script.js?v=20261010-contrast-themes"></script>
+  <script src="script.js?v=20261010-nav-left"></script>
 </body>
 </html>
