@@ -101,19 +101,25 @@
   };
 
   const THEME_DEFINITIONS = {
+    // Standard clone base: black panels, white text, high contrast — only accent family changes
     standard: { name: 'Standard', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#1a2a3a', text: '#ffffff', muted: '#aab6c1', primary: '#00cc83', secondary: '#00b4ff', accent: '#00ff9d', success: '#00cc83', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#00ff9d', distraction: '#ff3355' },
-    'blush-pink': { name: 'Blush Pink', light: true, background: '#fff5f8', panel: '#ffffff', panelAlt: '#ffe8ef', border: '#f3c4d4', text: '#1a1216', muted: '#8a6b76', primary: '#e85a8c', secondary: '#f4a0b8', accent: '#ff6b9d', success: '#3faf7a', warning: '#d4890f', error: '#d63d5c', productive: '#e85a8c', neutral: '#3faf7a', distraction: '#d63d5c' },
-    catppuccin: { name: 'Catppuccin', light: false, background: '#1e1e2e', panel: '#181825', panelAlt: '#313244', border: '#45475a', text: '#cdd6f4', muted: '#a6adc8', primary: '#89b4fa', secondary: '#cba6f7', accent: '#f5c2e7', success: '#a6e3a1', warning: '#f9e2af', error: '#f38ba8', productive: '#89b4fa', neutral: '#a6e3a1', distraction: '#f38ba8' },
-    nord: { name: 'Nord', light: false, background: '#2e3440', panel: '#3b4252', panelAlt: '#434c5e', border: '#4c566a', text: '#eceff4', muted: '#d8dee9', primary: '#88c0d0', secondary: '#81a1c1', accent: '#8fbcbb', success: '#a3be8c', warning: '#ebcb8b', error: '#bf616a', productive: '#88c0d0', neutral: '#a3be8c', distraction: '#bf616a' },
-    'tokyo-night': { name: 'Tokyo Night', light: false, background: '#1a1b26', panel: '#16161e', panelAlt: '#24283b', border: '#414868', text: '#c0caf5', muted: '#a9b1d6', primary: '#7aa2f7', secondary: '#bb9af7', accent: '#7dcfff', success: '#9ece6a', warning: '#e0af68', error: '#f7768e', productive: '#7aa2f7', neutral: '#9ece6a', distraction: '#f7768e' },
-    'rose-pine': { name: 'Rosé Pine', light: false, background: '#191724', panel: '#1f1d2e', panelAlt: '#26233a', border: '#403d52', text: '#e0def4', muted: '#908caa', primary: '#c4a7e7', secondary: '#ebbcba', accent: '#eb6f92', success: '#9ccfd8', warning: '#f6c177', error: '#eb6f92', productive: '#c4a7e7', neutral: '#9ccfd8', distraction: '#eb6f92' }
+    'neon-pink': { name: 'Neon Pink', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#2a1a28', text: '#ffffff', muted: '#aab6c1', primary: '#ff4d9a', secondary: '#00b4ff', accent: '#ff5eb3', success: '#ff4d9a', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#ff5eb3', distraction: '#ff3355' },
+    'electric-blue': { name: 'Electric Blue', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#1a2438', text: '#ffffff', muted: '#aab6c1', primary: '#3d9eff', secondary: '#7ad4ff', accent: '#4db8ff', success: '#3d9eff', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#4db8ff', distraction: '#ff3355' },
+    'blush-pink': { name: 'Blush Pink', light: true, background: '#ffe4ef', panel: '#fff7fa', panelAlt: '#ffd6e5', border: '#f0a8c0', text: '#140a10', muted: '#6b4a56', primary: '#d81b60', secondary: '#c2185b', accent: '#ad1457', success: '#c2185b', warning: '#b36b00', error: '#b71c3a', productive: '#1565c0', neutral: '#ad1457', distraction: '#b71c3a' },
+    'cyber-amber': { name: 'Cyber Amber', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#2a2214', text: '#ffffff', muted: '#aab6c1', primary: '#ffb020', secondary: '#ffd060', accent: '#ffc107', success: '#ffb020', warning: '#ff8a00', error: '#ff3355', productive: '#1e7bff', neutral: '#ffc107', distraction: '#ff3355' },
+    'violet-pulse': { name: 'Violet Pulse', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#241a38', text: '#ffffff', muted: '#aab6c1', primary: '#b44dff', secondary: '#d28cff', accent: '#c76bff', success: '#b44dff', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#c76bff', distraction: '#ff3355' },
+    'ice-cyan': { name: 'Ice Cyan', light: false, background: '#050608', panel: '#0a0e14', panelAlt: '#0f1419', border: '#143038', text: '#ffffff', muted: '#aab6c1', primary: '#00e5ff', secondary: '#7af0ff', accent: '#00f0ff', success: '#00e5ff', warning: '#ffaa00', error: '#ff3355', productive: '#1e7bff', neutral: '#00f0ff', distraction: '#ff3355' }
   };
   const LEGACY_THEME_IDS = {
     'midnight-black': 'standard',
-    'purple-focus': 'catppuccin',
-    'emerald-productivity': 'nord',
+    'purple-focus': 'violet-pulse',
+    'emerald-productivity': 'ice-cyan',
     'arctic-light': 'blush-pink',
-    'crimson-command': 'rose-pine'
+    'crimson-command': 'neon-pink',
+    catppuccin: 'violet-pulse',
+    nord: 'ice-cyan',
+    'tokyo-night': 'electric-blue',
+    'rose-pine': 'neon-pink'
   };
   const DEFAULT_APPEARANCE = {
     themeId: 'standard', customColors: null, layout: 'balanced', textSize: 'normal', accessibility: false,
@@ -264,12 +270,13 @@
     const grid = document.getElementById('themeGalleryGrid');
     if (!grid) return;
     const descriptions = {
-      standard: 'The original Life OS look — dark mission control with neon green.',
-      'blush-pink': 'Soft white, black, and pink — cute aesthetic for a bright vibe.',
-      catppuccin: 'Popular pastel mocha palette, cozy and easy on the eyes.',
-      nord: 'Cool arctic blues and frosty neutrals for calm focus.',
-      'tokyo-night': 'City-night blues and purples with crisp neon accents.',
-      'rose-pine': 'Warm muted rose tones with a soft, elegant night feel.'
+      standard: 'Classic mission control — black base, white text, neon green accents.',
+      'neon-pink': 'Same dark high-contrast layout, neon pink instead of green.',
+      'electric-blue': 'Same dark high-contrast layout, electric blue accents.',
+      'blush-pink': 'Pink background with black text — soft light aesthetic.',
+      'cyber-amber': 'Black base with amber/gold accents for warm contrast.',
+      'violet-pulse': 'Black base with neon violet accents — sharp and bold.',
+      'ice-cyan': 'Black base with icy cyan accents — crisp and bright.'
     };
     const options = Object.entries(THEME_DEFINITIONS).map(([id, theme]) => ({ id, theme, description: descriptions[id] || '' }));
     options.push({ id: 'custom', theme: customThemeDefinition(), description: 'Build your own palette with custom colors.' });

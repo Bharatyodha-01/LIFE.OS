@@ -2,7 +2,7 @@
  * LIFE-OS — Service Worker
  * Enables offline use and installability (PWA).
  */
-const CACHE_NAME = 'lifeos-pwa-v30-aesthetic-themes';
+const CACHE_NAME = 'lifeos-pwa-v31-contrast-themes';
 const OFFLINE_URL = './offline.html';
 
 /** App shell — works offline after first visit */
@@ -23,6 +23,7 @@ const PRECACHE = [
   './style.css?v=20261006-theme',
   './style.css?v=20261006-theme-gallery',
   './style.css?v=20261010-aesthetic-themes',
+  './style.css?v=20261010-contrast-themes',
   './script.js',
   './script.js?v=20260529-key-context',
   './script.js?v=20260530-chart-analytics',
@@ -30,6 +31,7 @@ const PRECACHE = [
   './script.js?v=20261006-theme',
   './script.js?v=20261006-theme-gallery',
   './script.js?v=20261010-aesthetic-themes',
+  './script.js?v=20261010-contrast-themes',
   './charts.js',
   './charts.js?v=20260530-chart-analytics',
   './charts.js?v=20260602-layered-analytics',
