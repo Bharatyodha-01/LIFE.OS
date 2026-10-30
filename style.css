@@ -163,6 +163,41 @@ body.pwa-standalone {
 .header-center { justify-self: center; }
 .header-right { justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
 
+.cloud-account-trigger { display: inline-flex; align-items: center; gap: 8px; }
+.cloud-avatar-fallback, .cloud-header-photo, .cloud-menu-photo {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 0.65rem;
+  object-fit: cover;
+}
+.cloud-account-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% - 4px);
+  right: 22px;
+  width: min(330px, calc(100vw - 24px));
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  box-shadow: 0 12px 36px #000b, 0 0 18px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.cloud-account-menu-person { display: flex; align-items: center; gap: 11px; min-width: 0; padding-bottom: 9px; border-bottom: 1px solid var(--border); }
+.cloud-menu-avatar, .cloud-menu-photo { width: 38px; height: 38px; flex-basis: 38px; }
+.cloud-account-menu-details { display: grid; min-width: 0; gap: 4px; font-size: 0.72rem; overflow-wrap: anywhere; }
+.cloud-account-menu-details strong { color: var(--text); }
+.cloud-account-menu-details span { color: var(--text-dim); }
+.cloud-account-menu-details b { color: var(--accent); }
+.cloud-account-menu > .btn { width: 100%; }
+
 #currentClock {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
@@ -2468,6 +2503,7 @@ body.pwa-standalone .header {
     width: 100%;
     min-width: 0;
   }
+  .cloud-account-menu { position: fixed; top: 148px; right: 12px; }
 
   .dashboard {
     grid-template-columns: 1fr;

@@ -83,10 +83,25 @@
       <button class="btn btn-ghost" id="btnSound" type="button">SND</button>
       <button class="btn btn-ghost hide-mobile" id="btnFullscreen" type="button">FULL</button>
       <button class="btn btn-ghost" id="btnHelp" type="button">?</button>
-      <button class="btn btn-ghost" id="btnCloudAccount" type="button">SIGN IN</button>
+      <button class="btn btn-ghost cloud-account-trigger" id="btnCloudAccount" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Google account">
+        <span class="cloud-avatar-fallback" id="cloudAvatarFallback" aria-hidden="true">●</span>
+        <img id="cloudHeaderPhoto" class="cloud-header-photo hidden" alt="">
+        <span id="cloudAccountButtonLabel">SIGN IN</span>
+      </button>
       <button class="btn btn-primary" id="btnSettings" type="button">SETTINGS</button>
     </div>
   </header>
+
+  <div class="cloud-account-menu hidden" id="cloudAccountMenu" role="menu" aria-label="Google account">
+    <div class="cloud-account-menu-person">
+      <span class="cloud-avatar-fallback cloud-menu-avatar" id="cloudMenuAvatarFallback" aria-hidden="true">●</span>
+      <img id="cloudMenuPhoto" class="cloud-menu-photo hidden" alt="">
+      <div class="cloud-account-menu-details"><strong id="cloudMenuEmail">Not signed in</strong><span>In-app name: <b id="cloudMenuProfileName">—</b></span></div>
+    </div>
+    <button class="btn btn-primary" id="btnCloudMenuSignIn" type="button">Sign in with Google</button>
+    <button class="btn btn-ghost hidden" id="btnCloudMenuSwitch" type="button">Use another Google account</button>
+    <button class="btn btn-ghost hidden" id="btnCloudMenuSignOut" type="button">Sign out</button>
+  </div>
 
   <!-- Mobile: hidden input captures phone keyboard -->
   <div class="mobile-key-bar" id="mobileKeyBar">
@@ -334,7 +349,7 @@
           </div>
           <div id="cloudSessionBox" class="cloud-panel hidden">
             <p class="cloud-setup-hint">If Google sign-in reports <code>CONFIGURATION_NOT_FOUND</code>, <a href="https://console.firebase.google.com/project/fir-d6d80/authentication/providers" target="_blank" rel="noopener">open this project’s Firebase sign-in providers</a>, enable Google, set a support email, and save. Also add this site’s hostname under Authentication → Settings → Authorized domains.</p>
-            <div class="cloud-account-row"><img id="cloudPhoto" class="cloud-photo hidden" alt="Google account photo"><div><strong id="cloudSignedAs">Not signed in</strong><p id="cloudSyncStatus">Cloud idle</p></div></div>
+            <div class="cloud-account-row"><img id="cloudPhoto" class="cloud-photo hidden" alt="Google account photo"><div><strong id="cloudSignedAs">Not signed in</strong><p>In-app name: <span id="cloudProfileName">—</span></p><p id="cloudSyncStatus">Cloud idle</p></div></div>
             <div class="cloud-actions"><button class="btn btn-primary" id="btnGoogleSignIn" type="button">Continue with Google</button><button class="btn btn-primary hidden" id="btnCloudSyncNow" type="button">Sync now</button><button class="btn btn-ghost hidden" id="btnGoogleSignOut" type="button">Sign out</button></div>
           </div>
         </div>

@@ -48,18 +48,37 @@
   function updateChip() {
     const btn = document.getElementById('btnCloudAccount');
     if (!btn) return;
+    const label = document.getElementById('cloudAccountButtonLabel');
+    const headerPhoto = document.getElementById('cloudHeaderPhoto');
+    const headerFallback = document.getElementById('cloudAvatarFallback');
+    const menuPhoto = document.getElementById('cloudMenuPhoto');
+    const menuFallback = document.getElementById('cloudMenuAvatarFallback');
+    const menuEmail = document.getElementById('cloudMenuEmail');
+    const menuProfile = document.getElementById('cloudMenuProfileName');
+    const displayName = cloud.app && cloud.app.getActiveUserName ? cloud.app.getActiveUserName() : '';
+    const email = cloud.user && cloud.user.email || '';
+    if (menuEmail) menuEmail.textContent = email || 'Not signed in';
+    if (menuProfile) menuProfile.textContent = cloud.user ? (displayName || 'User') : '—';
+    const hasPhoto = !!(cloud.user && cloud.user.photoURL);
+    [headerPhoto, menuPhoto].forEach((img) => {
+      if (!img) return;
+      if (hasPhoto) { img.src = cloud.user.photoURL; img.classList.remove('hidden'); }
+      else { img.removeAttribute('src'); img.classList.add('hidden'); }
+    });
+    [headerFallback, menuFallback].forEach((avatar) => {
+      if (avatar) avatar.classList.toggle('hidden', hasPhoto);
+    });
     if (!isConfigured()) {
-      btn.textContent = 'CLOUD SETUP';
+      if (label) label.textContent = 'CLOUD SETUP';
       btn.title = 'Firebase keys pending';
       return;
     }
     if (cloud.user) {
-      const shortName = (cloud.user.displayName || cloud.user.email || 'Signed in').split(' ')[0];
-      btn.textContent = shortName.toUpperCase();
-      btn.title = cloud.user.email || 'Signed in';
+      if (label) label.textContent = displayName || 'ACCOUNT';
+      btn.title = (email || 'Signed in') + (displayName ? ' · LIFE-OS: ' + displayName : '');
       return;
     }
-    btn.textContent = 'SIGN IN';
+    if (label) label.textContent = 'SIGN IN';
     btn.title = 'Sign in with Google to sync phone and laptop';
   }
 
@@ -71,10 +90,12 @@
     if (session) session.classList.toggle('hidden', !isConfigured());
     if (signed) {
       signed.textContent = cloud.user
-        ? (cloud.user.email + '  ·  uid ' + cloud.user.uid)
+        ? (cloud.user.email || cloud.user.displayName || 'Google account')
         : (isConfigured() ? 'Not signed in — phone/laptop sync off' : 'Firebase keys not pasted yet');
     }
     const photo = document.getElementById('cloudPhoto');
+    const profileName = document.getElementById('cloudProfileName');
+    if (profileName) profileName.textContent = cloud.user && cloud.app && cloud.app.getActiveUserName ? cloud.app.getActiveUserName() : '—';
     if (photo) {
       if (cloud.user && cloud.user.photoURL) {
         photo.src = cloud.user.photoURL;
@@ -86,9 +107,15 @@
     const loginBtn = document.getElementById('btnGoogleSignIn');
     const outBtn = document.getElementById('btnGoogleSignOut');
     const syncBtn = document.getElementById('btnCloudSyncNow');
+    const menuSignIn = document.getElementById('btnCloudMenuSignIn');
+    const menuSwitch = document.getElementById('btnCloudMenuSwitch');
+    const menuOut = document.getElementById('btnCloudMenuSignOut');
     if (loginBtn) loginBtn.classList.toggle('hidden', !!cloud.user);
     if (outBtn) outBtn.classList.toggle('hidden', !cloud.user);
     if (syncBtn) syncBtn.classList.toggle('hidden', !cloud.user);
+    if (menuSignIn) menuSignIn.classList.toggle('hidden', !!cloud.user);
+    if (menuSwitch) menuSwitch.classList.toggle('hidden', !cloud.user);
+    if (menuOut) menuOut.classList.toggle('hidden', !cloud.user);
     setStatus(cloud.lastStatus);
     updateChip();
   }
@@ -315,6 +342,7 @@
   }
 
   async function handleSignedIn(user) {
+    stopListeners();
     cloud.user = user;
     showAuthOverlay(false);
     renderCloudTab();
@@ -434,6 +462,7 @@
       if (!cloud.user) return;
       listen();
       notifyLocalChange('workspace');
+      renderCloudTab();
     },
     isConfigured,
     isSignedIn: function () { return !!cloud.user; },
@@ -444,9 +473,20 @@
 
   document.addEventListener('click', (event) => {
     if (event.target.closest('#btnCloudAccount')) {
-      document.getElementById('btnSettings')?.click();
-      document.querySelector('#settingsModal .settings-tabs [data-tab="cloud"]')?.click();
+      const menu = document.getElementById('cloudAccountMenu');
+      const open = menu && menu.classList.contains('hidden');
+      if (menu) menu.classList.toggle('hidden', !open);
+      document.getElementById('btnCloudAccount')?.setAttribute('aria-expanded', String(!!open));
+      renderCloudTab();
+      return;
     }
+    if (!event.target.closest('#cloudAccountMenu')) {
+      document.getElementById('cloudAccountMenu')?.classList.add('hidden');
+      document.getElementById('btnCloudAccount')?.setAttribute('aria-expanded', 'false');
+    }
+    if (event.target.closest('#btnCloudMenuSignIn')) { signIn(); document.getElementById('cloudAccountMenu')?.classList.add('hidden'); }
+    if (event.target.closest('#btnCloudMenuSwitch')) signIn();
+    if (event.target.closest('#btnCloudMenuSignOut')) { signOut(); document.getElementById('cloudAccountMenu')?.classList.add('hidden'); }
     if (event.target.closest('#btnGoogleSignIn') || event.target.closest('#btnGoogleSignInOverlay')) {
       signIn();
     }

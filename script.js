@@ -3029,6 +3029,7 @@
   window.LifeOSApp = {
     toast: function (message, type) { showToast(message, type); },
     getActiveUserId: function () { return state.activeUserId; },
+    getActiveUserName: function () { return getActiveUserName(); },
     collectSnapshot: collectCloudSnapshot,
     applyWorkspace: function (data) {
       if (!data || !Array.isArray(data.users) || !data.users.length) return;
@@ -3069,7 +3070,8 @@
       // the same person. Match names and merge local-only days into that cloud
       // profile; keep unmatched profiles as separate users.
       local.workspace.users.forEach((localUser) => {
-        let cloudUser = users.find((user) => normalizeName(user.name) === normalizeName(localUser.name));
+        let cloudUser = users.find((user) => user.id === localUser.id)
+          || users.find((user) => normalizeName(user.name) === normalizeName(localUser.name));
         if (!cloudUser) {
           cloudUser = { ...localUser };
           if (users.some((user) => user.id === cloudUser.id)) cloudUser.id += '_' + Date.now();
