@@ -57,6 +57,10 @@
     const menuProfile = document.getElementById('cloudMenuProfileName');
     const displayName = cloud.app && cloud.app.getActiveUserName ? cloud.app.getActiveUserName() : '';
     const email = cloud.user && cloud.user.email || '';
+    btn.classList.toggle('is-signed-in', !!cloud.user);
+    const initial = (displayName || email || '●').trim().charAt(0).toUpperCase();
+    if (headerFallback) headerFallback.textContent = initial;
+    if (menuFallback) menuFallback.textContent = initial;
     if (menuEmail) menuEmail.textContent = email || 'Not signed in';
     if (menuProfile) menuProfile.textContent = cloud.user ? (displayName || 'User') : '—';
     const hasPhoto = !!(cloud.user && cloud.user.photoURL);

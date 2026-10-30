@@ -164,6 +164,18 @@ body.pwa-standalone {
 .header-right { justify-self: end; flex-wrap: wrap; justify-content: flex-end; }
 
 .cloud-account-trigger { display: inline-flex; align-items: center; gap: 8px; }
+.cloud-account-trigger.is-signed-in {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  justify-content: center;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+}
+.cloud-account-trigger.is-signed-in:hover,
+.cloud-account-trigger.is-signed-in[aria-expanded="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.cloud-account-trigger.is-signed-in #cloudAccountButtonLabel { display: none; }
 .cloud-avatar-fallback, .cloud-header-photo, .cloud-menu-photo {
   width: 26px;
   height: 26px;
@@ -2503,6 +2515,7 @@ body.pwa-standalone .header {
     width: 100%;
     min-width: 0;
   }
+  .header-right .cloud-account-trigger.is-signed-in { width: 42px; min-width: 42px; justify-self: center; }
   .cloud-account-menu { position: fixed; top: 148px; right: 12px; }
 
   .dashboard {

@@ -90,18 +90,17 @@
       </button>
       <button class="btn btn-primary" id="btnSettings" type="button">SETTINGS</button>
     </div>
-  </header>
-
-  <div class="cloud-account-menu hidden" id="cloudAccountMenu" role="menu" aria-label="Google account">
-    <div class="cloud-account-menu-person">
-      <span class="cloud-avatar-fallback cloud-menu-avatar" id="cloudMenuAvatarFallback" aria-hidden="true">●</span>
-      <img id="cloudMenuPhoto" class="cloud-menu-photo hidden" alt="">
-      <div class="cloud-account-menu-details"><strong id="cloudMenuEmail">Not signed in</strong><span>In-app name: <b id="cloudMenuProfileName">—</b></span></div>
+    <div class="cloud-account-menu hidden" id="cloudAccountMenu" role="menu" aria-label="Google account">
+      <div class="cloud-account-menu-person">
+        <span class="cloud-avatar-fallback cloud-menu-avatar" id="cloudMenuAvatarFallback" aria-hidden="true">●</span>
+        <img id="cloudMenuPhoto" class="cloud-menu-photo hidden" alt="">
+        <div class="cloud-account-menu-details"><strong id="cloudMenuEmail">Not signed in</strong><span>In-app name: <b id="cloudMenuProfileName">—</b></span></div>
+      </div>
+      <button class="btn btn-primary" id="btnCloudMenuSignIn" type="button">Sign in with Google</button>
+      <button class="btn btn-ghost hidden" id="btnCloudMenuSwitch" type="button">Use another Google account</button>
+      <button class="btn btn-ghost hidden" id="btnCloudMenuSignOut" type="button">Sign out</button>
     </div>
-    <button class="btn btn-primary" id="btnCloudMenuSignIn" type="button">Sign in with Google</button>
-    <button class="btn btn-ghost hidden" id="btnCloudMenuSwitch" type="button">Use another Google account</button>
-    <button class="btn btn-ghost hidden" id="btnCloudMenuSignOut" type="button">Sign out</button>
-  </div>
+  </header>
 
   <!-- Mobile: hidden input captures phone keyboard -->
   <div class="mobile-key-bar" id="mobileKeyBar">
