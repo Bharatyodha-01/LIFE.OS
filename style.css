@@ -208,6 +208,7 @@ body.pwa-standalone {
 .cloud-account-menu-details strong { color: var(--text); }
 .cloud-account-menu-details span { color: var(--text-dim); }
 .cloud-account-menu-details b { color: var(--accent); }
+.cloud-menu-status { color: var(--red); font-size: 0.68rem; line-height: 1.45; overflow-wrap: anywhere; }
 .cloud-account-menu > .btn { width: 100%; }
 
 #currentClock {

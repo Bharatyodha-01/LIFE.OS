@@ -42,6 +42,11 @@
     cloud.lastStatus = text;
     const el = document.getElementById('cloudSyncStatus');
     if (el) el.textContent = text;
+    const menuStatus = document.getElementById('cloudMenuStatus');
+    if (menuStatus) {
+      menuStatus.textContent = text;
+      menuStatus.classList.toggle('hidden', !/not enabled|unauthorized|failed|could not reach|missing/i.test(text));
+    }
     updateChip();
   }
 
@@ -370,7 +375,10 @@
     }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    const mobile = /Mobi|Android/i.test(navigator.userAgent) || window.matchMedia('(display-mode: standalone)').matches;
+    // A Windows desktop PWA is also "standalone"; redirect auth there can
+    // strand the user in a separate browser window. Use redirect only on
+    // actual mobile browsers/devices, and let desktop PWAs use the popup.
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     try {
       if (mobile) {
         await cloud.auth.signInWithRedirect(provider);
