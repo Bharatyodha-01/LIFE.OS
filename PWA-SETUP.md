@@ -14,6 +14,10 @@ LIFE-OS can be installed on **Android phones** and **desktop/laptop** like a nat
 
 The first signed-in device uploads its existing profiles and logs. Other devices download them after sign-in; new activity and settings sync automatically while online. Offline changes remain on that device and upload when connectivity returns. Firestore rules scope reads and writes to the signed-in Google UID.
 
+### Firebase API key alert in GitHub
+
+The Firebase web API key is a public project identifier required by the browser app, not an admin credential. It should still be restricted. In Google Cloud Console → APIs & Services → Credentials, restrict it to the app's website referrers (your exact HTTPS domain, plus localhost only for development) and Firebase APIs only. Never add service-account keys or private server credentials to this static app. Firebase access control comes from Firestore Security Rules, so publish the `firestore.rules` in this repository.
+
 ---
 
 ## Required files (already in this folder)

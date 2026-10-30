@@ -22,7 +22,7 @@
     db: null,
     user: null,
     unsubscribers: [],
-    profileTimer: null,
+    profileTimers: {},
     dayTimers: {},
     lastStatus: 'Cloud idle'
   };
@@ -184,6 +184,9 @@
         workspace: snap.data(),
         profiles: remoteDays
       });
+      // Sign-in can happen after this device has accumulated offline/local logs.
+      // Push the app-level union back so those logs reach every other device.
+      await pushEverything('Merged local and cloud data');
       setStatus('Synced · ' + new Date().toLocaleTimeString());
     } catch (error) {
       console.warn('[LIFE-OS cloud] pull failed', error);
@@ -245,15 +248,15 @@
     setStatus((reason || 'Uploaded') + ' · ' + new Date().toLocaleTimeString());
   }
 
-  async function pushProfile() {
+  async function pushProfile(profileIdOverride) {
     if (!cloud.user || !cloud.app || cloud.applying) return;
     const shot = cloud.app.collectSnapshot();
-    const profileId = shot.workspace.activeUserId;
+    const profileId = profileIdOverride || shot.workspace.activeUserId;
     const profile = shot.profiles[profileId];
     if (!profile) return;
     await workspaceRef().set(stripUndefined({
       users: shot.workspace.users,
-      activeUserId: profileId,
+      activeUserId: shot.workspace.activeUserId,
       updatedAt: Date.now()
     }), { merge: true });
     await profileRef(profileId).set(stripUndefined({
@@ -269,10 +272,10 @@
     setStatus('Saved to cloud · ' + new Date().toLocaleTimeString());
   }
 
-  async function pushDay(dayKey) {
+  async function pushDay(dayKey, profileIdOverride) {
     if (!cloud.user || !cloud.app || cloud.applying || !dayKey) return;
     const shot = cloud.app.collectSnapshot();
-    const profileId = shot.workspace.activeUserId;
+    const profileId = profileIdOverride || shot.workspace.activeUserId;
     const day = (shot.profiles[profileId] && shot.profiles[profileId].days || {})[dayKey];
     if (!day) return;
     await dayRef(profileId, dayKey).set(stripUndefined({
@@ -382,15 +385,17 @@
 
   function notifyLocalChange(kind, extra) {
     if (!cloud.user || cloud.applying) return;
+    const profileId = cloud.app.getActiveUserId();
     if (kind === 'day' && extra && extra.key) {
-      clearTimeout(cloud.dayTimers[extra.key]);
-      cloud.dayTimers[extra.key] = setTimeout(() => {
-        pushDay(extra.key).catch((error) => console.warn('[LIFE-OS cloud] day push', error));
+      const dayTimerKey = profileId + ':' + extra.key;
+      clearTimeout(cloud.dayTimers[dayTimerKey]);
+      cloud.dayTimers[dayTimerKey] = setTimeout(() => {
+        pushDay(extra.key, profileId).catch((error) => console.warn('[LIFE-OS cloud] day push', error));
       }, DAY_DEBOUNCE_MS);
     }
-    clearTimeout(cloud.profileTimer);
-    cloud.profileTimer = setTimeout(() => {
-      pushProfile().catch((error) => console.warn('[LIFE-OS cloud] profile push', error));
+    clearTimeout(cloud.profileTimers[profileId]);
+    cloud.profileTimers[profileId] = setTimeout(() => {
+      pushProfile(profileId).catch((error) => console.warn('[LIFE-OS cloud] profile push', error));
     }, PROFILE_DEBOUNCE_MS);
   }
 

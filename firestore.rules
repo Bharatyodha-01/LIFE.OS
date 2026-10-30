@@ -1,8 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /accounts/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    function ownsAccount(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
+
+    match /accounts/{uid}/workspace/{documentId} {
+      allow read: if ownsAccount(uid) && documentId == 'state';
+      allow create, update: if ownsAccount(uid)
+        && documentId == 'state'
+        && request.resource.data.keys().hasOnly([
+          'users', 'activeUserId', 'updatedAt', 'email', 'displayName', 'photoURL'
+        ])
+        && request.resource.data.users is list
+        && request.resource.data.users.size() <= 100
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
+    match /accounts/{uid}/profiles/{profileId} {
+      allow read: if ownsAccount(uid);
+      allow create, update: if ownsAccount(uid)
+        && request.resource.data.keys().hasOnly([
+          'name', 'prefs', 'appearance', 'mappings', 'schedules',
+          'reminderMarks', 'activeTask', 'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+
+      match /days/{dayId} {
+        allow read: if ownsAccount(uid);
+        allow create, update: if ownsAccount(uid)
+          && request.resource.data.keys().hasOnly(['timeline', 'taskSwitches', 'updatedAt'])
+          && request.resource.data.timeline is list
+          && request.resource.data.timeline.size() <= 5000
+          && request.resource.data.taskSwitches is number
+          && request.resource.data.taskSwitches >= 0
+          && request.resource.data.updatedAt is number;
+        allow delete: if false;
+      }
+    }
+
+    // All other paths are denied by default.
   }
 }

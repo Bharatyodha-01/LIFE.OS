@@ -752,7 +752,7 @@
     const sel = document.getElementById('userSelect');
     if (!sel) return;
     sel.innerHTML = state.users.map((u) =>
-      `<option value="${u.id}" ${u.id === state.activeUserId ? 'selected' : ''}>${u.name}</option>`
+      `<option value="${escapeHtml(u.id)}" ${u.id === state.activeUserId ? 'selected' : ''}>${escapeHtml(u.name)}</option>`
     ).join('');
   }
 
@@ -761,9 +761,9 @@
     if (!list) return;
     list.innerHTML = state.users.map((u) => `
       <div class="user-row">
-        <input type="text" class="user-rename-input" data-user-id="${u.id}" value="${u.name}">
-        ${state.users.length > 1 ? `<button type="button" class="btn btn-sm btn-danger" data-del-user="${u.id}">Remove</button>` : ''}
-        ${u.id === state.activeUserId ? '<span class="user-active-tag">ACTIVE</span>' : `<button type="button" class="btn btn-sm" data-switch-user="${u.id}">Switch</button>`}
+        <input type="text" class="user-rename-input" data-user-id="${escapeHtml(u.id)}" value="${escapeHtml(u.name)}">
+        ${state.users.length > 1 ? `<button type="button" class="btn btn-sm btn-danger" data-del-user="${escapeHtml(u.id)}">Remove</button>` : ''}
+        ${u.id === state.activeUserId ? '<span class="user-active-tag">ACTIVE</span>' : `<button type="button" class="btn btn-sm" data-switch-user="${escapeHtml(u.id)}">Switch</button>`}
       </div>
     `).join('');
 
@@ -1262,22 +1262,33 @@
   function normalizeMappingKeys(mappings) {
     const mainTasks = {};
     Object.entries(mappings.mainTasks || {}).forEach(([k, v]) => {
-      mainTasks[k.toUpperCase()] = v;
+      if (typeof k === 'string' && k.length === 1 && typeof v === 'string' && v.length <= 120) {
+        mainTasks[k.toUpperCase()] = v;
+      }
     });
 
     const subTasks = {};
     Object.entries(mappings.subTasks || {}).forEach(([parentKey, subs]) => {
       const pk = parentKey.toUpperCase();
+      if (!Object.prototype.hasOwnProperty.call(mainTasks, pk)) return;
       subTasks[pk] = {};
       Object.entries(subs || {}).forEach(([sk, name]) => {
-        subTasks[pk][sk.toUpperCase()] = name;
+        if (typeof sk === 'string' && sk.length === 1 && typeof name === 'string' && name.length <= 120) {
+          subTasks[pk][sk.toUpperCase()] = name;
+        }
       });
+    });
+
+    const allowedCategories = ['productive', 'study', 'distraction', 'neutral', 'rest'];
+    const categories = {};
+    Object.entries(mappings.categories || {}).forEach(([name, category]) => {
+      if (Object.values(mainTasks).includes(name) && allowedCategories.includes(category)) categories[name] = category;
     });
 
     return {
       mainTasks,
       subTasks,
-      categories: mappings.categories || {}
+      categories
     };
   }
 
@@ -1325,7 +1336,8 @@
 
   /** Get category for a main task name */
   function getCategory(mainName) {
-    return state.mappings.categories[mainName] || 'neutral';
+    const category = state.mappings.categories[mainName];
+    return ['productive', 'study', 'distraction', 'neutral', 'rest'].includes(category) ? category : 'neutral';
   }
 
   /** Download a file */
@@ -1820,7 +1832,7 @@
 
     if (sub) {
       breadcrumb.className = 'task-breadcrumb has-sub';
-      breadcrumb.innerHTML = `<span class="main-part">${main}</span><span class="sep">&gt;</span><span class="sub-part">${sub}</span>`;
+      breadcrumb.innerHTML = `<span class="main-part">${escapeHtml(main)}</span><span class="sep">&gt;</span><span class="sub-part">${escapeHtml(sub)}</span>`;
     } else {
       breadcrumb.className = 'task-breadcrumb';
       breadcrumb.textContent = main;
@@ -2081,8 +2093,8 @@
     const cat = entry.category || getCategory(entry.main);
     const style = getTaskStyle(entry.main);
     const taskLabel = entry.sub
-      ? `<span class="main">${entry.main}</span><span class="sub">${entry.sub}</span>`
-      : `<span class="main">${entry.main}</span>`;
+      ? `<span class="main">${escapeHtml(entry.main)}</span><span class="sub">${escapeHtml(entry.sub)}</span>`
+      : `<span class="main">${escapeHtml(entry.main)}</span>`;
 
     return `<div class="timeline-entry cat-${cat}${isActive ? ' active' : ''}" style="background:${style.bg};border-left-color:${style.border}">
       <div class="timeline-time">${entry.startFormatted} - ${entry.endFormatted || formatTime(new Date())}</div>
@@ -2101,7 +2113,7 @@
     }
 
     list.innerHTML = entries.map(e => {
-      const label = e.sub ? `${e.main} > ${e.sub}` : e.main;
+      const label = e.sub ? `${escapeHtml(e.main)} &gt; ${escapeHtml(e.sub)}` : escapeHtml(e.main);
       const style = getTaskStyle(e.main);
       return `<div class="recent-item">
         <span class="recent-task" style="color:${style.color};font-family:${style.font}">${label}</span>
@@ -2136,7 +2148,7 @@
     bars.innerHTML = sorted.map(([label, ms]) => {
       const pct = Math.round((ms / max) * 100);
       return `<div class="breakdown-item">
-        <div class="breakdown-label"><span>${label}</span><span>${formatDurationHuman(ms)}</span></div>
+        <div class="breakdown-label"><span>${escapeHtml(label)}</span><span>${formatDurationHuman(ms)}</span></div>
         <div class="breakdown-bar"><div class="breakdown-fill" style="width:${pct}%"></div></div>
       </div>`;
     }).join('');
@@ -2260,11 +2272,11 @@
     let html = '';
 
     Object.entries(state.mappings.mainTasks).forEach(([key, name]) => {
-      html += `<div class="help-key-item"><kbd>${key}</kbd> ${name}</div>`;
+      html += `<div class="help-key-item"><kbd>${escapeHtml(key)}</kbd> ${escapeHtml(name)}</div>`;
       const subs = state.mappings.subTasks[key];
       if (subs) {
         Object.entries(subs).forEach(([sk, sn]) => {
-          html += `<div class="help-key-item" style="margin-left:12px"><kbd>${key}</kbd> then <kbd>${sk}</kbd> → ${name} &gt; ${sn}</div>`;
+          html += `<div class="help-key-item" style="margin-left:12px"><kbd>${escapeHtml(key)}</kbd> then <kbd>${escapeHtml(sk)}</kbd> → ${escapeHtml(name)} &gt; ${escapeHtml(sn)}</div>`;
         });
       }
     });
@@ -2287,13 +2299,13 @@
       const cat = getCategory(name);
       const checked = state.selectedMainKeys.has(key) ? 'checked' : '';
       return `<div class="mapping-row">
-        <input type="checkbox" data-main-key="${key}" ${checked}>
-        <span class="mapping-key">${key}</span>
-        <span class="mapping-name">${name}</span>
+        <input type="checkbox" data-main-key="${escapeHtml(key)}" ${checked}>
+        <span class="mapping-key">${escapeHtml(key)}</span>
+        <span class="mapping-name">${escapeHtml(name)}</span>
         <span class="mapping-cat ${cat}">${cat}</span>
         <div class="mapping-actions">
-          <button type="button" data-edit-main="${key}">Edit</button>
-          <button type="button" data-del-main="${key}">Del</button>
+          <button type="button" data-edit-main="${escapeHtml(key)}">Edit</button>
+          <button type="button" data-del-main="${escapeHtml(key)}">Del</button>
         </div>
       </div>`;
     }).join('');
@@ -2336,11 +2348,11 @@
         const id = `${parentKey}:${key}`;
         const checked = state.selectedSubKeys.has(id) ? 'checked' : '';
         html += `<div class="mapping-row">
-          <input type="checkbox" data-sub-id="${id}" ${checked}>
-          <span class="mapping-key">${key}</span>
-          <span class="mapping-name">${parentName} > ${name}</span>
+          <input type="checkbox" data-sub-id="${escapeHtml(id)}" ${checked}>
+          <span class="mapping-key">${escapeHtml(key)}</span>
+          <span class="mapping-name">${escapeHtml(parentName)} &gt; ${escapeHtml(name)}</span>
           <div class="mapping-actions">
-            <button type="button" data-del-sub="${id}">Del</button>
+            <button type="button" data-del-sub="${escapeHtml(id)}">Del</button>
           </div>
         </div>`;
       });
@@ -2370,8 +2382,8 @@
     list.innerHTML = Object.entries(state.mappings.mainTasks).map(([, name]) => {
       const cat = getCategory(name);
       return `<div class="mapping-row">
-        <span class="mapping-name">${name}</span>
-        <select data-cat-task="${name}" class="input-select">
+        <span class="mapping-name">${escapeHtml(name)}</span>
+        <select data-cat-task="${escapeHtml(name)}" class="input-select">
           ${['productive', 'study', 'distraction', 'neutral', 'rest'].map(c =>
             `<option value="${c}" ${cat === c ? 'selected' : ''}>${c}</option>`
           ).join('')}
@@ -2391,7 +2403,7 @@
   function populateSubParentSelect() {
     const sel = document.getElementById('subParentInput');
     sel.innerHTML = Object.entries(state.mappings.mainTasks)
-      .map(([k, v]) => `<option value="${k}">${k} — ${v}</option>`)
+      .map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(k)} — ${escapeHtml(v)}</option>`)
       .join('');
   }
 
@@ -3020,7 +3032,10 @@
     collectSnapshot: collectCloudSnapshot,
     applyWorkspace: function (data) {
       if (!data || !Array.isArray(data.users) || !data.users.length) return;
-      state.users = data.users;
+      state.users = data.users.filter((user) => user
+        && typeof user.id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(user.id)
+        && typeof user.name === 'string' && user.name.trim().length > 0 && user.name.length <= 120);
+      if (!state.users.length) return;
       if (data.activeUserId && data.users.some((user) => user.id === data.activeUserId)) {
         state.activeUserId = data.activeUserId;
       }
@@ -3042,8 +3057,48 @@
     },
     applyRemoteSnapshot: function (remote) {
       if (!remote) return;
-      if (remote.workspace) window.LifeOSApp.applyWorkspace(remote.workspace);
-      Object.entries(remote.profiles || {}).forEach(([profileId, pack]) => {
+      const local = collectCloudSnapshot();
+      const packs = remote.profiles || {};
+      const users = Array.isArray(remote.workspace && remote.workspace.users)
+        ? [...remote.workspace.users]
+        : [...local.workspace.users];
+      const profileIdMap = {};
+      const normalizeName = (name) => String(name || '').trim().toLocaleLowerCase();
+
+      // Device-local profile IDs can differ even when both devices represent
+      // the same person. Match names and merge local-only days into that cloud
+      // profile; keep unmatched profiles as separate users.
+      local.workspace.users.forEach((localUser) => {
+        let cloudUser = users.find((user) => normalizeName(user.name) === normalizeName(localUser.name));
+        if (!cloudUser) {
+          cloudUser = { ...localUser };
+          if (users.some((user) => user.id === cloudUser.id)) cloudUser.id += '_' + Date.now();
+          users.push(cloudUser);
+        }
+        profileIdMap[localUser.id] = cloudUser.id;
+        const localPack = local.profiles[localUser.id];
+        const cloudPack = packs[cloudUser.id] || { profile: null, days: {} };
+        if (!cloudPack.profile && localPack) cloudPack.profile = localPack;
+        cloudPack.days = cloudPack.days || {};
+        Object.entries(localPack && localPack.days || {}).forEach(([dayKey, day]) => {
+          const remoteDay = cloudPack.days[dayKey] || { timeline: [], taskSwitches: 0 };
+          const entries = new Map();
+          [...(remoteDay.timeline || []), ...(day.timeline || [])].forEach((entry) => {
+            if (entry) entries.set(entryIdentity(entry), entry);
+          });
+          cloudPack.days[dayKey] = {
+            timeline: [...entries.values()].sort((a, b) => (a.startTime || a.start || 0) - (b.startTime || b.start || 0)),
+            taskSwitches: Math.max(Number(remoteDay.taskSwitches) || 0, Number(day.taskSwitches) || 0)
+          };
+        });
+        packs[cloudUser.id] = cloudPack;
+      });
+
+      const localActiveId = profileIdMap[local.workspace.activeUserId];
+      const activeUserId = localActiveId || remote.workspace && remote.workspace.activeUserId;
+      const mergedWorkspace = { ...(remote.workspace || {}), users, activeUserId };
+      window.LifeOSApp.applyWorkspace(mergedWorkspace);
+      Object.entries(packs).forEach(([profileId, pack]) => {
         writeProfileLocal(profileId, pack.profile);
         Object.entries(pack.days || {}).forEach(([dayKey, day]) => {
           mergeDayIntoLocal(profileId, dayKey, day);
