@@ -1,6 +1,18 @@
 # LIFE-OS — Progressive Web App (PWA) Setup
 
-LIFE-OS can be installed on **Android phones** and **desktop/laptop** like a native app. All your data stays in **localStorage** on the device (per user profile).
+LIFE-OS can be installed on **Android phones** and **desktop/laptop** like a native app. Data is cached in localStorage per device; enable Firebase Cloud Sync below to keep it in sync across devices.
+
+## Enable Google sign-in and cross-device sync
+
+1. Create a Firebase project and register a Web app in [Firebase Console](https://console.firebase.google.com/).
+2. In **Authentication → Sign-in method**, enable **Google**.
+3. Create a **Cloud Firestore** database.
+4. In **Firestore → Rules**, publish the rules in `firestore.rules`.
+5. Copy the Web app configuration into `firebase-config.js`, replacing the `PASTE_...` values and setting `enabled: true`.
+6. In **Authentication → Settings → Authorized domains**, add the domain hosting LIFE-OS (and `localhost` for local development).
+7. Host the app over HTTPS. Open LIFE-OS on each device, go to **Settings → Cloud Sync**, and sign into the same Google account.
+
+The first signed-in device uploads its existing profiles and logs. Other devices download them after sign-in; new activity and settings sync automatically while online. Offline changes remain on that device and upload when connectivity returns. Firestore rules scope reads and writes to the signed-in Google UID.
 
 ---
 

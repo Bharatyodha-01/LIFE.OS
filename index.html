@@ -83,6 +83,7 @@
       <button class="btn btn-ghost" id="btnSound" type="button">SND</button>
       <button class="btn btn-ghost hide-mobile" id="btnFullscreen" type="button">FULL</button>
       <button class="btn btn-ghost" id="btnHelp" type="button">?</button>
+      <button class="btn btn-ghost" id="btnCloudAccount" type="button">SIGN IN</button>
       <button class="btn btn-primary" id="btnSettings" type="button">SETTINGS</button>
     </div>
   </header>
@@ -238,6 +239,7 @@
           <button class="tab" data-tab="sub" type="button">Subtasks</button>
           <button class="tab" data-tab="categories" type="button">Categories</button>
           <button class="tab" data-tab="prefs" type="button">Preferences</button>
+          <button class="tab" data-tab="cloud" type="button">Cloud Sync</button>
           <button class="tab" data-tab="appearance" type="button">Appearance</button>
           <button class="tab" data-tab="data" type="button">Data</button>
         </div>
@@ -314,6 +316,25 @@
           <div class="install-pwa" id="installPwaBox">
             <p>Install on Android: tap browser menu → <strong>Add to Home screen</strong> or use the button below.</p>
             <button class="btn btn-primary" id="btnInstallPwa" type="button">Install App</button>
+          </div>
+        </div>
+
+        <div class="tab-content" data-tab="cloud" id="tabCloud">
+          <p class="tab-desc">Sign in with the same Google account on your phone and laptop. Your LIFE-OS logs and settings will sync through Firebase.</p>
+          <div id="cloudSetupBox" class="cloud-panel hidden">
+            <h3>One-time Firebase setup</h3>
+            <ol>
+              <li>Create a project at <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase Console</a> and add a Web app.</li>
+              <li>In Authentication → Sign-in method, enable Google.</li>
+              <li>Create a Cloud Firestore database. In its Rules tab, paste the contents of <code>firestore.rules</code> and publish.</li>
+              <li>Copy the Web app config into <code>firebase-config.js</code>, replacing each <code>PASTE_…</code> value and setting <code>enabled: true</code>.</li>
+              <li>Add this site’s hostname under Authentication → Settings → Authorized domains.</li>
+            </ol>
+            <p>Then reload LIFE-OS and tap Sign in. Firebase web config is a public client identifier; Firestore rules restrict each account to its own data.</p>
+          </div>
+          <div id="cloudSessionBox" class="cloud-panel hidden">
+            <div class="cloud-account-row"><img id="cloudPhoto" class="cloud-photo hidden" alt="Google account photo"><div><strong id="cloudSignedAs">Not signed in</strong><p id="cloudSyncStatus">Cloud idle</p></div></div>
+            <div class="cloud-actions"><button class="btn btn-primary" id="btnGoogleSignIn" type="button">Continue with Google</button><button class="btn btn-primary hidden" id="btnCloudSyncNow" type="button">Sync now</button><button class="btn btn-ghost hidden" id="btnGoogleSignOut" type="button">Sign out</button></div>
           </div>
         </div>
 
@@ -471,6 +492,11 @@
     <div class="modal reminder-card"><div class="reminder-kicker" id="reminderKicker">SCHEDULE REMINDER</div><h2 id="reminderTitle"></h2><p id="reminderMessage"></p><div class="reminder-actions" id="reminderActions"></div></div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="firebase-config.js?v=20261030"></script>
+  <script src="cloud.js?v=20261030"></script>
   <script src="charts.js?v=20260602-layered-analytics"></script>
   <script src="script.js?v=20261010-nav-left"></script>
 </body>

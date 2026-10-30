@@ -1075,6 +1075,25 @@ body.pwa-standalone {
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
+.cloud-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 12px 0;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+.cloud-panel h3 { color: var(--accent); margin: 0 0 8px; }
+.cloud-panel ol { padding-left: 22px; }
+.cloud-panel li { margin: 5px 0; }
+.cloud-panel a { color: var(--accent); }
+.cloud-panel code { color: var(--text); }
+.cloud-account-row { display: flex; align-items: center; gap: 12px; overflow-wrap: anywhere; }
+.cloud-account-row p { margin: 4px 0 0; }
+.cloud-photo { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.cloud-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
 .tab-desc {
   font-size: 0.75rem;
   color: var(--text-dim);

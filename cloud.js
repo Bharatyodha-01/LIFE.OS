@@ -85,8 +85,10 @@
     }
     const loginBtn = document.getElementById('btnGoogleSignIn');
     const outBtn = document.getElementById('btnGoogleSignOut');
+    const syncBtn = document.getElementById('btnCloudSyncNow');
     if (loginBtn) loginBtn.classList.toggle('hidden', !!cloud.user);
     if (outBtn) outBtn.classList.toggle('hidden', !cloud.user);
+    if (syncBtn) syncBtn.classList.toggle('hidden', !cloud.user);
     setStatus(cloud.lastStatus);
     updateChip();
   }
@@ -194,7 +196,14 @@
   async function pushEverything(reason) {
     if (!cloud.user || !cloud.app) return;
     const shot = cloud.app.collectSnapshot();
-    const batch = cloud.db.batch();
+    let batch = cloud.db.batch();
+    let writes = 0;
+    const commitIfFull = async () => {
+      if (writes < 400) return;
+      await batch.commit();
+      batch = cloud.db.batch();
+      writes = 0;
+    };
     batch.set(workspaceRef(), stripUndefined({
       users: shot.workspace.users,
       activeUserId: shot.workspace.activeUserId,
@@ -203,6 +212,7 @@
       displayName: cloud.user.displayName || '',
       photoURL: cloud.user.photoURL || ''
     }), { merge: true });
+    writes++;
 
     Object.entries(shot.profiles).forEach(([profileId, profile]) => {
       batch.set(profileRef(profileId), stripUndefined({
@@ -215,16 +225,23 @@
         activeTask: profile.activeTask,
         updatedAt: Date.now()
       }), { merge: true });
-      Object.entries(profile.days || {}).forEach(([dayKey, day]) => {
+      writes++;
+    });
+    await batch.commit();
+    batch = cloud.db.batch();
+    writes = 0;
+    for (const [profileId, profile] of Object.entries(shot.profiles)) {
+      for (const [dayKey, day] of Object.entries(profile.days || {})) {
         batch.set(dayRef(profileId, dayKey), stripUndefined({
           timeline: day.timeline || [],
           taskSwitches: day.taskSwitches || 0,
           updatedAt: Date.now()
         }), { merge: true });
-      });
-    });
-
-    await batch.commit();
+        writes++;
+        await commitIfFull();
+      }
+    }
+    if (writes) await batch.commit();
     setStatus((reason || 'Uploaded') + ' · ' + new Date().toLocaleTimeString());
   }
 
@@ -406,11 +423,6 @@
 
   document.addEventListener('click', (event) => {
     if (event.target.closest('#btnCloudAccount')) {
-      if (!isConfigured() || !cloud.user) {
-        showAuthOverlay(true);
-        renderCloudTab();
-        return;
-      }
       document.getElementById('btnSettings')?.click();
       document.querySelector('#settingsModal .settings-tabs [data-tab="cloud"]')?.click();
     }
