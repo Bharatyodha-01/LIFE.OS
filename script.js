@@ -189,7 +189,23 @@
     applyTheme(false);
     applyUiAppearance(false);
   }
-  function saveAppearance() { localStorage.setItem(userPrefix() + 'appearance', JSON.stringify(state.appearance)); }
+  function saveAppearance() {
+    localStorage.setItem(userPrefix() + 'appearance', JSON.stringify(state.appearance));
+    cloudTouch('appearance');
+  }
+
+  function cloudTouch(kind, extra) {
+    if (window.LifeOSCloud) window.LifeOSCloud.notifyLocalChange(kind, extra);
+  }
+
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
   function hexRgb(hex) {
     const value = String(hex || '').replace('#', '');
     if (!/^[0-9a-f]{6}$/i.test(value)) return [0, 0, 0];
@@ -372,12 +388,15 @@
     if (!activeTask) return;
 
     console.log('[LIFE-OS] SAVING ACTIVE TASK:', activeTask.main, activeTask.sub || '', 'startedAt:', activeTask.startedAt);
+    activeTask.updatedAt = Date.now();
     localStorage.setItem(sessionActiveKey(), JSON.stringify(activeTask));
+    cloudTouch('active');
   }
 
   function removeActiveTask() {
     console.log('[LIFE-OS] REMOVING ACTIVE TASK');
     localStorage.removeItem(sessionActiveKey());
+    cloudTouch('active');
   }
 
   function loadCurrentActiveTask() {
@@ -430,6 +449,7 @@
   function saveUsers() {
     localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(state.users));
     localStorage.setItem(STORAGE_PREFIX + 'active_user', state.activeUserId);
+    cloudTouch('workspace');
   }
 
   function migrateLegacyData() {
@@ -477,6 +497,7 @@
     restoreCurrentActiveTask();
     refreshAllUI();
     renderSchedules();
+    if (window.LifeOSCloud && window.LifeOSCloud.onLocalUserSwitch) window.LifeOSCloud.onLocalUserSwitch();
     checkScheduleReminders();
     showToast('Switched to ' + getActiveUserName());
   }
@@ -488,17 +509,24 @@
       state.schedules = Array.isArray(list) ? list.filter((item) => item && item.id && Number.isFinite(Number(item.startTimestamp)) && Number.isFinite(Number(item.endTimestamp))) : [];
     } catch (_) { state.schedules = []; }
   }
-  function saveSchedules() { localStorage.setItem(userPrefix() + SCHEDULE_KEY, JSON.stringify(state.schedules)); }
+  function saveSchedules() {
+    localStorage.setItem(userPrefix() + SCHEDULE_KEY, JSON.stringify(state.schedules));
+    cloudTouch('schedules');
+  }
   function getScheduleStatus(item, now = Date.now()) {
     if (!item.enabled) return 'Disabled';
     if (now < item.startTimestamp) return 'Upcoming';
     if (now < item.endTimestamp) return 'Active window';
     return reminderMarkers()[item.id]?.started ? 'Completed' : 'Missed';
   }
+  function saveReminderMarks(marks) {
+    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+    cloudTouch('reminders');
+  }
   function markScheduleStarted(id) {
     const marks = reminderMarkers();
     marks[id] = { ...(marks[id] || {}), started: true };
-    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+    saveReminderMarks(marks);
   }
   function scheduleTime(ts, dateOnly = false) {
     return new Intl.DateTimeFormat(undefined, dateOnly ? { weekday: 'short', month: 'short', day: 'numeric' } : { hour: 'numeric', minute: '2-digit' }).format(new Date(ts));
@@ -570,7 +598,7 @@
     const marks = reminderMarkers();
     if (id) delete marks[id];
     else Object.keys(marks).forEach((key) => { if (!state.schedules.some((item) => item.id === key)) delete marks[key]; });
-    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+    saveReminderMarks(marks);
   }
   function cancelScheduleReminders(id) {
     state.reminderQueue = state.reminderQueue.filter((reminder) => reminder.item.id !== id);
@@ -591,7 +619,7 @@
         }
       });
     });
-    localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+    saveReminderMarks(marks);
     renderSchedules();
     showNextReminder();
   }
@@ -983,6 +1011,7 @@
     state.prefs.reminderVibration = document.getElementById('defaultVibration').value;
     state.prefs.reminderVolume = Number(document.getElementById('defaultVolume').value);
     localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
+    cloudTouch('prefs');
     showToast('Defaults saved for new schedules');
   }
 
@@ -993,6 +1022,7 @@
     state.prefs.clockFormat = document.getElementById('prefClockFormat').value;
     state.soundEnabled = state.prefs.soundEnabled;
     localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
+    cloudTouch('prefs');
     applyPreferencesToUI();
     refreshAllUI();
     tickTimer();
@@ -1138,13 +1168,16 @@
 
   /** Save today's timeline */
   function saveTodayData(data) {
-    localStorage.setItem(userPrefix() + 'day_' + dateKey(), JSON.stringify(data));
+    const key = dateKey();
+    localStorage.setItem(userPrefix() + 'day_' + key, JSON.stringify(data));
     purgeOldData();
+    cloudTouch('day', { key });
   }
 
   function saveDayDataByKey(key, data) {
     localStorage.setItem(userPrefix() + 'day_' + key, JSON.stringify(data));
     purgeOldData();
+    cloudTouch('day', { key });
   }
 
   function startOfNextDayMs(timestamp) {
@@ -1271,6 +1304,7 @@
 
   function saveMappings() {
     localStorage.setItem(userPrefix() + 'mappings', JSON.stringify(state.mappings));
+    cloudTouch('mappings');
   }
 
   /** Main-task keys only need to be unique among other main tasks. */
@@ -2565,7 +2599,7 @@
         marks[item.id] = {};
         if (item.startTimestamp <= Date.now()) marks[item.id].start = `start:${item.updatedAt}`;
         if (item.endTimestamp <= Date.now()) marks[item.id].end = `end:${item.updatedAt}`;
-        localStorage.setItem(userPrefix() + REMINDER_STATE_KEY, JSON.stringify(marks));
+        saveReminderMarks(marks);
       }
       saveSchedules(); renderSchedules(); checkScheduleReminders();
     });
@@ -2652,6 +2686,7 @@
       state.soundEnabled = !state.soundEnabled;
       state.prefs.soundEnabled = state.soundEnabled;
       localStorage.setItem(userPrefix() + 'prefs', JSON.stringify(state.prefs));
+      cloudTouch('prefs');
       document.getElementById('btnSound').textContent = state.soundEnabled ? 'SND' : 'MUTE';
       const soundCb = document.getElementById('prefSound');
       if (soundCb) soundCb.checked = state.soundEnabled;
@@ -2912,6 +2947,116 @@
     }
   }
 
+  function collectCloudSnapshot() {
+    const profiles = {};
+    state.users.forEach((user) => {
+      const prefix = STORAGE_PREFIX + 'u_' + user.id + '_';
+      const days = {};
+      Object.keys(localStorage).forEach((key) => {
+        if (!key.startsWith(prefix + 'day_')) return;
+        days[key.slice((prefix + 'day_').length)] = readJson(key, emptyDayData());
+      });
+      profiles[user.id] = {
+        name: user.name,
+        prefs: readJson(prefix + 'prefs', null),
+        appearance: readJson(prefix + 'appearance', null),
+        mappings: readJson(prefix + 'mappings', null),
+        schedules: readJson(prefix + SCHEDULE_KEY, []),
+        reminderMarks: readJson(prefix + REMINDER_STATE_KEY, {}),
+        activeTask: readJson(prefix + 'active', null),
+        days
+      };
+    });
+    return {
+      workspace: { users: state.users, activeUserId: state.activeUserId },
+      profiles
+    };
+  }
+
+  function writeProfileLocal(profileId, profile) {
+    if (!profile) return;
+    const prefix = STORAGE_PREFIX + 'u_' + profileId + '_';
+    if (profile.prefs) localStorage.setItem(prefix + 'prefs', JSON.stringify(profile.prefs));
+    if (profile.appearance) localStorage.setItem(prefix + 'appearance', JSON.stringify(profile.appearance));
+    if (profile.mappings) localStorage.setItem(prefix + 'mappings', JSON.stringify(profile.mappings));
+    if (profile.schedules) localStorage.setItem(prefix + SCHEDULE_KEY, JSON.stringify(profile.schedules));
+    if (profile.reminderMarks) localStorage.setItem(prefix + REMINDER_STATE_KEY, JSON.stringify(profile.reminderMarks));
+    if (profile.activeTask) localStorage.setItem(prefix + 'active', JSON.stringify(profile.activeTask));
+    else if (profile.activeTask === null) localStorage.removeItem(prefix + 'active');
+  }
+
+  function mergeDayIntoLocal(profileId, dayKey, remoteDay) {
+    const prefix = STORAGE_PREFIX + 'u_' + profileId + '_';
+    const local = readJson(prefix + 'day_' + dayKey, emptyDayData());
+    const remoteTimeline = Array.isArray(remoteDay && remoteDay.timeline) ? remoteDay.timeline : [];
+    const map = new Map();
+    [...(local.timeline || []), ...remoteTimeline].forEach((entry) => {
+      if (!entry) return;
+      map.set(entryIdentity(entry), entry);
+    });
+    const merged = {
+      timeline: [...map.values()].sort((a, b) => (a.startTime || a.start || 0) - (b.startTime || b.start || 0)),
+      taskSwitches: Math.max(Number(local.taskSwitches) || 0, Number(remoteDay && remoteDay.taskSwitches) || 0)
+    };
+    localStorage.setItem(prefix + 'day_' + dayKey, JSON.stringify(merged));
+    return merged;
+  }
+
+  function reloadActiveUserFromStorage() {
+    loadPreferences();
+    loadMappings();
+    loadSchedules();
+    restoreCurrentActiveTask();
+    refreshAllUI();
+    renderSchedules();
+    updateLivePanel();
+    updateSystemStatus();
+    tickTimer();
+  }
+
+  window.LifeOSApp = {
+    toast: function (message, type) { showToast(message, type); },
+    getActiveUserId: function () { return state.activeUserId; },
+    collectSnapshot: collectCloudSnapshot,
+    applyWorkspace: function (data) {
+      if (!data || !Array.isArray(data.users) || !data.users.length) return;
+      state.users = data.users;
+      if (data.activeUserId && data.users.some((user) => user.id === data.activeUserId)) {
+        state.activeUserId = data.activeUserId;
+      }
+      localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(state.users));
+      localStorage.setItem(STORAGE_PREFIX + 'active_user', state.activeUserId);
+      renderUserSelect();
+    },
+    applyRemoteProfile: function (profileId, profile) {
+      writeProfileLocal(profileId, profile);
+      if (profileId === state.activeUserId) reloadActiveUserFromStorage();
+    },
+    applyRemoteDay: function (profileId, dayKey, day) {
+      mergeDayIntoLocal(profileId, dayKey, day);
+      if (profileId === state.activeUserId) {
+        renderTimeline();
+        renderAnalytics();
+        updateTodaySummary();
+      }
+    },
+    applyRemoteSnapshot: function (remote) {
+      if (!remote) return;
+      if (remote.workspace) window.LifeOSApp.applyWorkspace(remote.workspace);
+      Object.entries(remote.profiles || {}).forEach(([profileId, pack]) => {
+        writeProfileLocal(profileId, pack.profile);
+        Object.entries(pack.days || {}).forEach(([dayKey, day]) => {
+          mergeDayIntoLocal(profileId, dayKey, day);
+        });
+      });
+      reloadActiveUserFromStorage();
+    },
+    afterCloudSync: function () {
+      reloadActiveUserFromStorage();
+      showToast(window.LifeOSCloud && window.LifeOSCloud.isSignedIn() ? 'Phone + laptop cloud linked' : 'Cloud ready');
+    }
+  };
+
   // ─── Initialize ──────────────────────────────────────────────
 
   function init() {
@@ -2940,6 +3085,12 @@
     setupPWA();
     refreshAllUI();
     renderSchedules();
+
+    if (window.LifeOSCloud) {
+      window.LifeOSCloud.boot(window.LifeOSApp).then(() => {
+        window.LifeOSCloud.renderCloudTab();
+      });
+    }
 
     // PHASE 3: END restoration phase - now safe to accept key input
     console.log('[LIFE-OS] init() PHASE 3: Completing restoration phase');
