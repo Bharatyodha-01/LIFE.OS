@@ -2924,6 +2924,7 @@
       state.deferredInstallPrompt = e;
       if (!localStorage.getItem(STORAGE_PREFIX + 'install_dismissed')) {
         document.getElementById('installBanner')?.classList.remove('hidden');
+        syncDashboardViewport();
       }
     });
 
@@ -2937,7 +2938,18 @@
     document.getElementById('btnDismissInstall')?.addEventListener('click', () => {
       document.getElementById('installBanner')?.classList.add('hidden');
       localStorage.setItem(STORAGE_PREFIX + 'install_dismissed', '1');
+      syncDashboardViewport();
     });
+
+    syncDashboardViewport();
+    window.addEventListener('resize', syncDashboardViewport, { passive: true });
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(syncDashboardViewport);
+      ['appHeader', 'installBanner', 'mobileKeyBar', 'subtaskBanner', 'feedbackBar'].forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) observer.observe(element);
+      });
+    }
 
     function updateOnlineStatus() {
       const badge = document.getElementById('offlineBadge');
@@ -2956,6 +2968,38 @@
           reg.update();
         })
         .catch((err) => console.warn('SW registration failed:', err));
+    }
+  }
+
+  // The desktop header can wrap to two rows depending on app/window width.
+  // Measuring the real flow elements avoids the old fixed-header estimate
+  // placing the dashboard behind the Windows taskbar or clipping its footer.
+  function syncDashboardViewport() {
+    const dashboard = document.querySelector('.dashboard');
+    if (!dashboard) return;
+    if (window.matchMedia('(max-width: 1100px)').matches) {
+      dashboard.style.removeProperty('height');
+      dashboard.style.removeProperty('min-height');
+      document.documentElement.style.overflowY = '';
+      document.body.style.overflowY = '';
+      return;
+    }
+    const viewportHeight = Math.min(window.innerHeight || 0, window.visualViewport?.height || Infinity);
+    const flowHeight = ['installBanner', 'appHeader', 'mobileKeyBar', 'subtaskBanner', 'feedbackBar']
+      .map((id) => document.getElementById(id))
+      .filter((element) => element && !element.classList.contains('hidden'))
+      .reduce((total, element) => total + element.getBoundingClientRect().height, 0);
+    const availableHeight = viewportHeight - flowHeight - 4;
+    if (availableHeight < 600) {
+      dashboard.style.height = 'auto';
+      dashboard.style.minHeight = Math.max(360, availableHeight) + 'px';
+      document.documentElement.style.overflowY = 'auto';
+      document.body.style.overflowY = 'auto';
+    } else {
+      dashboard.style.minHeight = '';
+      dashboard.style.height = availableHeight + 'px';
+      document.documentElement.style.overflowY = '';
+      document.body.style.overflowY = '';
     }
   }
 
