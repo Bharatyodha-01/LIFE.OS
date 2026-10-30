@@ -349,8 +349,9 @@
         return;
       }
       console.warn('[LIFE-OS cloud] sign-in', error);
-      setStatus('Sign-in failed: ' + (error.message || 'try again'));
-      showToastSafe(error.message || 'Google sign-in failed', 'error');
+      const message = friendlyAuthError(error);
+      setStatus(message);
+      showToastSafe(message, 'error');
     }
   }
 
@@ -362,6 +363,21 @@
 
   function showToastSafe(message, type) {
     if (cloud.app && cloud.app.toast) cloud.app.toast(message, type);
+  }
+
+  function friendlyAuthError(error) {
+    const code = error && error.code || '';
+    const message = error && error.message || '';
+    if (message.indexOf('CONFIGURATION_NOT_FOUND') !== -1 || code === 'auth/operation-not-allowed') {
+      return 'Google sign-in is not enabled in Firebase yet. In project fir-d6d80, open Authentication → Sign-in method, enable Google, choose a support email, and save.';
+    }
+    if (code === 'auth/unauthorized-domain') {
+      return 'This website domain is not authorized in Firebase. Add its hostname in Authentication → Settings → Authorized domains.';
+    }
+    if (code === 'auth/network-request-failed') {
+      return 'Could not reach Firebase. Check your internet connection and reload LIFE-OS.';
+    }
+    return message || 'Google sign-in failed. Check the Firebase Authentication settings.';
   }
 
   function notifyLocalChange(kind, extra) {

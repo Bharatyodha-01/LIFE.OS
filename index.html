@@ -333,6 +333,7 @@
             <p>Then reload LIFE-OS and tap Sign in. Firebase web config is a public client identifier; Firestore rules restrict each account to its own data.</p>
           </div>
           <div id="cloudSessionBox" class="cloud-panel hidden">
+            <p class="cloud-setup-hint">If Google sign-in reports <code>CONFIGURATION_NOT_FOUND</code>, <a href="https://console.firebase.google.com/project/fir-d6d80/authentication/providers" target="_blank" rel="noopener">open this project’s Firebase sign-in providers</a>, enable Google, set a support email, and save. Also add this site’s hostname under Authentication → Settings → Authorized domains.</p>
             <div class="cloud-account-row"><img id="cloudPhoto" class="cloud-photo hidden" alt="Google account photo"><div><strong id="cloudSignedAs">Not signed in</strong><p id="cloudSyncStatus">Cloud idle</p></div></div>
             <div class="cloud-actions"><button class="btn btn-primary" id="btnGoogleSignIn" type="button">Continue with Google</button><button class="btn btn-primary hidden" id="btnCloudSyncNow" type="button">Sync now</button><button class="btn btn-ghost hidden" id="btnGoogleSignOut" type="button">Sign out</button></div>
           </div>
